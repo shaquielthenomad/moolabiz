@@ -95,6 +95,8 @@ export async function POST(request: Request) {
         PLAN: merchant.plan,
         API_SECRET: apiSecret,
         DB_PATH: "/data/store.db",
+        OPENCLAW_PROVISIONER_URL: "http://openclaw-provisioner:9999",
+        OPENCLAW_PROVISIONER_KEY: process.env.OPENCLAW_PROVISIONER_KEY || "moolabiz-provision-key",
       });
 
       // Store API secret in hub DB so the dashboard can proxy requests to the bot

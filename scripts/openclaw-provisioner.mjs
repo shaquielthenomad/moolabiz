@@ -131,6 +131,66 @@ async function handleStatus(req, res) {
   }
 }
 
+async function handleQR(req, res) {
+  const { slug } = JSON.parse(await readBody(req));
+  const s = safeSlug(slug);
+
+  // Check if already connected
+  try {
+    const statusOut = execSync(
+      `docker exec openclaw-${s} openclaw --profile ${s} channels list 2>&1`,
+      { timeout: 10000 }
+    ).toString();
+    if (statusOut.includes("linked") || statusOut.includes("ON")) {
+      return json(res, 200, { connected: true, qr: null });
+    }
+  } catch { /* not connected */ }
+
+  // Run channels login and capture the QR ASCII output
+  // The command blocks waiting for scan, so we use a short timeout
+  try {
+    const { execFile } = await import("node:child_process");
+    const qrPromise = new Promise((resolve, reject) => {
+      const proc = execFile(
+        "docker",
+        ["exec", `openclaw-${s}`, "openclaw", "--profile", s, "channels", "login", "--channel", "whatsapp"],
+        { timeout: 12000 },
+        (err, stdout, stderr) => {
+          // Will always "fail" due to timeout since it waits for scan
+          resolve(stdout + stderr);
+        }
+      );
+      // Collect output as it comes
+      let output = "";
+      proc.stdout?.on("data", (d) => { output += d; });
+      proc.stderr?.on("data", (d) => { output += d; });
+      setTimeout(() => {
+        try { proc.kill(); } catch {}
+        resolve(output);
+      }, 10000);
+    });
+
+    const output = await qrPromise;
+
+    // Extract the QR block (ASCII art between the ▄ characters)
+    const qrLines = output.split("\n").filter(
+      (line) => line.includes("▄") || line.includes("█") || line.includes("▀")
+    );
+
+    if (qrLines.length > 5) {
+      // Convert ASCII QR to a renderable format
+      const qrAscii = qrLines.join("\n");
+      return json(res, 200, { connected: false, qr: qrAscii, type: "ascii" });
+    }
+
+    // No QR yet — gateway might still be starting
+    return json(res, 200, { connected: false, qr: null, message: "QR not ready yet" });
+  } catch (err) {
+    console.error(`[provisioner] QR fetch failed for ${s}:`, err.message);
+    return json(res, 200, { connected: false, qr: null, error: err.message });
+  }
+}
+
 // ─── Server ────────────────────────────────────────────────────────
 
 const routes = {
@@ -139,6 +199,7 @@ const routes = {
   "/start": handleStart,
   "/remove": handleRemove,
   "/status": handleStatus,
+  "/qr": handleQR,
 };
 
 const server = http.createServer(async (req, res) => {

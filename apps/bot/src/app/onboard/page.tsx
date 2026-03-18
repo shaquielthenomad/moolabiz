@@ -1,37 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export default function OnboardPage() {
   const [businessName, setBusinessName] = useState("Your Store");
   const [connected, setConnected] = useState(false);
+  const [qr, setQr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const title = document.title;
-      if (title && !title.includes("MoolaBiz")) {
-        setBusinessName(title.replace(/ — Shop Online$/, ""));
-      }
+      const t = document.title.replace(/ \| MoolaBiz$/, "");
+      if (t) setBusinessName(t);
     }
   }, []);
 
-  // Poll for connection status
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch("/api/onboard/status");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.connected) {
-            setConnected(true);
-            clearInterval(interval);
-          }
-        }
-      } catch {}
-    }, 3000);
-    return () => clearInterval(interval);
+  const fetchQR = useCallback(async () => {
+    try {
+      const res = await fetch("/api/onboard/qr");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.connected) {
+        setConnected(true);
+        setLoading(false);
+        return;
+      }
+      if (data.qr) {
+        setQr(data.qr);
+        setLoading(false);
+      } else {
+        // No QR yet, keep polling
+        setLoading(true);
+      }
+    } catch {
+      // provisioner not ready
+    }
   }, []);
 
+  // Initial fetch + poll every 5s
+  useEffect(() => {
+    fetchQR();
+    const interval = setInterval(fetchQR, 5000);
+    return () => clearInterval(interval);
+  }, [fetchQR]);
+
+  // Connected state
   if (connected) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center px-4 py-12">
@@ -42,9 +55,7 @@ export default function OnboardPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">WhatsApp connected</h1>
-          <p className="text-slate-500">
-            Your bot is live. Message it on WhatsApp to start setting up your store.
-          </p>
+          <p className="text-slate-500">Your bot is live. Message it to start setting up your store.</p>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-left space-y-3">
             <p className="text-sm font-semibold text-slate-700">Quick commands:</p>
             <div className="space-y-2 text-sm text-slate-600">
@@ -64,7 +75,7 @@ export default function OnboardPage() {
 
   return (
     <main className="min-h-screen bg-white flex flex-col items-center px-4 py-8">
-      <div className="max-w-lg w-full space-y-6">
+      <div className="max-w-md w-full space-y-6">
         {/* Header */}
         <div className="text-center">
           <p className="text-xs font-semibold text-emerald-600 tracking-wide uppercase mb-2">MoolaBiz</p>
@@ -74,17 +85,24 @@ export default function OnboardPage() {
           </p>
         </div>
 
-        {/* OpenClaw UI in iframe — proxied through our API */}
-        <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm" style={{ height: "500px" }}>
-          <iframe
-            src="/api/onboard/proxy/"
-            className="w-full h-full"
-            title="WhatsApp QR Code"
-            allow="clipboard-write"
-          />
+        {/* QR Code */}
+        <div className="flex justify-center">
+          {loading || !qr ? (
+            <div className="w-72 h-72 border border-slate-200 rounded-xl flex flex-col items-center justify-center gap-3 bg-slate-50">
+              <div className="w-8 h-8 border-2 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
+              <p className="text-sm text-slate-400">Generating QR code...</p>
+            </div>
+          ) : (
+            <pre
+              className="bg-white border border-slate-200 rounded-xl p-4 text-[6px] sm:text-[8px] leading-none font-mono select-none overflow-hidden"
+              style={{ letterSpacing: "-0.5px", lineHeight: "1" }}
+            >
+              {qr}
+            </pre>
+          )}
         </div>
 
-        {/* Instructions below */}
+        {/* Instructions */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left">
           <p className="text-sm font-semibold text-slate-700 mb-2">How to scan:</p>
           <ol className="space-y-1.5 text-sm text-slate-500">
@@ -98,12 +116,14 @@ export default function OnboardPage() {
             </li>
             <li className="flex gap-2">
               <span className="font-semibold text-slate-700 shrink-0">3.</span>
-              Tap &quot;Link a Device&quot; and scan the code shown above
+              Tap &quot;Link a Device&quot; and scan the code above
             </li>
           </ol>
         </div>
 
-        <p className="text-xs text-slate-400 text-center">Powered by MoolaBiz</p>
+        <p className="text-xs text-slate-400 text-center">
+          QR refreshes automatically. Powered by MoolaBiz.
+        </p>
       </div>
     </main>
   );
