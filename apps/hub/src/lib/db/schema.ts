@@ -18,6 +18,7 @@ export const merchants = pgTable("merchants", {
   subscriptionId: text("subscription_id"),
   whatsappVerifyToken: text("whatsapp_verify_token"),
   whatsappAppSecret: text("whatsapp_app_secret"),
+  apiSecret: text("api_secret"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

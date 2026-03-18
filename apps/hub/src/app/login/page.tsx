@@ -152,12 +152,10 @@ export default function LoginPage() {
             <p className="text-sm text-slate-500">
               Forgot your PIN?{" "}
               <a
-                href="https://wa.me/27600000000?text=Hi%2C%20I%20forgot%20my%20MoolaBiz%20PIN%20and%20need%20help%20resetting%20it."
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:support@moolabiz.shop?subject=PIN%20Reset%20Request&body=Hi%2C%20I%20forgot%20my%20MoolaBiz%20PIN%20and%20need%20help%20resetting%20it."
                 className="text-slate-700 font-medium hover:underline"
               >
-                Message us on WhatsApp
+                Email us at support@moolabiz.shop
               </a>
             </p>
           </div>

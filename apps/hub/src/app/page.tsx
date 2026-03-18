@@ -191,7 +191,7 @@ export default function Home() {
         <div className="max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-full mb-8 tracking-wide">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" aria-hidden="true" />
-            Trusted by 500+ South African sellers
+            Built for South African sellers
           </div>
 
           <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 leading-tight tracking-tight">
@@ -521,7 +521,7 @@ export default function Home() {
             Ready to start selling?
           </h2>
           <p className="mt-4 text-slate-500 text-lg">
-            Join 500+ South African sellers who run their business through WhatsApp.
+            Join South African sellers who run their business through WhatsApp.
           </p>
           <div className="mt-8">
             <a

@@ -133,15 +133,20 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
       updatedAt: new Date(),
     }).where(eq(merchants.id, merchantId));
 
+    const apiSecret = crypto.randomBytes(32).toString("hex");
     await setEnvironmentVariables(app.uuid, {
       BUSINESS_NAME: merchant.businessName,
       BUSINESS_SLUG: merchant.slug,
       WHATSAPP_NUMBER: merchant.whatsappNumber,
       PAYMENT_PROVIDER: merchant.paymentProvider,
       PLAN: merchant.plan,
-      API_SECRET: crypto.randomBytes(32).toString("hex"),
+      API_SECRET: apiSecret,
       DB_PATH: "/data/store.db",
     });
+
+    // Store API secret in hub DB so the dashboard can proxy requests to the bot
+    await db.update(merchants).set({ apiSecret, updatedAt: new Date() })
+      .where(eq(merchants.id, merchantId));
 
     await deployApplication(app.uuid);
     console.log(`[stripe] Catalog deploying: ${subdomain} (${app.uuid})`);

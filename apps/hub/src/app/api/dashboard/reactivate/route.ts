@@ -30,6 +30,15 @@ export async function POST() {
       );
     }
 
+    // For cancelled merchants, they need to re-subscribe via the signup flow.
+    // Reactivate only works for paused (suspended) merchants whose Stripe subscription is still active.
+    if (merchant.status === "cancelled") {
+      return NextResponse.json(
+        { error: "Your subscription was cancelled. Please sign up again to reactivate." },
+        { status: 400 }
+      );
+    }
+
     if (merchant.coolifyAppUuid) {
       await startApplication(merchant.coolifyAppUuid);
     }

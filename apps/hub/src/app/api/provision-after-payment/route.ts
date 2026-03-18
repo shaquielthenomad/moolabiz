@@ -86,15 +86,22 @@ export async function POST(request: Request) {
       }
 
       // 2. Set environment variables
+      const apiSecret = crypto.randomBytes(32).toString("hex");
       await setEnvironmentVariables(appUuid, {
         BUSINESS_NAME: merchant.businessName,
         BUSINESS_SLUG: slug,
         WHATSAPP_NUMBER: merchant.whatsappNumber,
         PAYMENT_PROVIDER: merchant.paymentProvider,
         PLAN: merchant.plan,
-        API_SECRET: crypto.randomBytes(32).toString("hex"),
+        API_SECRET: apiSecret,
         DB_PATH: "/data/store.db",
       });
+
+      // Store API secret in hub DB so the dashboard can proxy requests to the bot
+      await db
+        .update(merchants)
+        .set({ apiSecret, updatedAt: new Date() })
+        .where(eq(merchants.id, merchant.id));
 
       // 3. Trigger catalog deployment
       await deployApplication(appUuid);

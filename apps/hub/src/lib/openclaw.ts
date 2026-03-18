@@ -2,47 +2,36 @@
  * OpenClaw provisioning — each merchant gets their own OpenClaw instance
  * running `openclaw gateway` with a unique --profile for isolation.
  *
- * Deployed as Docker containers via Coolify's server command API.
- * Each container runs on the coolify network with Traefik labels
- * for routing /onboard to the OpenClaw web UI (QR code page).
+ * Deployed via the openclaw-provisioner service (a lightweight Node.js
+ * HTTP server with Docker socket access) instead of Coolify's server
+ * command API which doesn't exist in our Coolify version.
  */
 
-function getEnv(key: string): string {
-  const val = process.env[key];
-  if (!val) throw new Error(`${key} is not set`);
-  return val;
-}
+const PROVISIONER_URL =
+  process.env.OPENCLAW_PROVISIONER_URL || "http://openclaw-provisioner:9999";
+const PROVISIONER_KEY =
+  process.env.OPENCLAW_PROVISIONER_KEY || "moolabiz-provision-key";
 
-function getCoolifyConfig() {
-  return {
-    apiUrl: getEnv("COOLIFY_API_URL"),
-    apiToken: getEnv("COOLIFY_API_TOKEN"),
-    serverUuid: getEnv("COOLIFY_SERVER_UUID"),
-  };
-}
-
-async function executeOnServer(command: string): Promise<string> {
-  const cfg = getCoolifyConfig();
-  const res = await fetch(
-    `${cfg.apiUrl}/api/v1/servers/${cfg.serverUuid}/command`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${cfg.apiToken}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ command }),
-    }
-  );
+async function provisionerRequest(
+  path: string,
+  body: Record<string, unknown>
+): Promise<Response> {
+  const res = await fetch(`${PROVISIONER_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-auth-key": PROVISIONER_KEY,
+    },
+    body: JSON.stringify(body),
+  });
 
   if (!res.ok) {
-    const body = await res.text();
-    console.error(`[openclaw] Server command failed (${res.status}):`, body);
-    throw new Error(`Server command failed: HTTP ${res.status}`);
+    const text = await res.text();
+    console.error(`[openclaw] Provisioner ${path} failed (${res.status}):`, text);
+    throw new Error(`Provisioner ${path} failed: HTTP ${res.status}`);
   }
 
-  return res.text();
+  return res;
 }
 
 /**
@@ -58,65 +47,34 @@ export async function deployOpenClaw(opts: {
   ownerPhone: string;
   paymentProvider: string;
 }): Promise<{ containerId: string }> {
-  const slug = opts.slug.replace(/[^a-z0-9-]/g, "");
+  console.log(`[openclaw] Deploying for ${opts.slug}...`);
 
-  const cmd = `
-set -e
+  const res = await provisionerRequest("/deploy", {
+    slug: opts.slug,
+    businessName: opts.businessName,
+    ownerPhone: opts.ownerPhone,
+  });
 
-# Remove existing container if any
-docker rm -f "openclaw-${slug}" 2>/dev/null || true
-
-# Run OpenClaw gateway for this merchant
-CONTAINER_ID=$(docker run -d \\
-  --name "openclaw-${slug}" \\
-  --network coolify \\
-  --restart unless-stopped \\
-  --memory 256m \\
-  --cpus 0.25 \\
-  -v "openclaw-${slug}-data:/root/.openclaw-${slug}" \\
-  -e OLLAMA_BASE_URL=http://ollama-shared:11434 \\
-  -l "traefik.enable=true" \\
-  -l "traefik.http.routers.oc-${slug}.rule=Host(\\\`${slug}.bot.moolabiz.shop\\\`) && PathPrefix(\\\`/onboard\\\`)" \\
-  -l "traefik.http.routers.oc-${slug}.entrypoints=https" \\
-  -l "traefik.http.routers.oc-${slug}.tls.certresolver=letsencrypt" \\
-  -l "traefik.http.routers.oc-${slug}.tls=true" \\
-  -l "traefik.http.services.oc-${slug}.loadbalancer.server.port=18789" \\
-  -l "traefik.http.routers.oc-${slug}.priority=100" \\
-  node:22-slim \\
-  sh -c "npx -y openclaw --profile ${slug} gateway --port 18789 --bind 0.0.0.0")
-
-echo "CONTAINER_ID=\${CONTAINER_ID}"
-`.trim();
-
-  console.log(`[openclaw] Deploying for ${slug}...`);
-  const output = await executeOnServer(cmd);
-
-  const match = output.match(/CONTAINER_ID=([a-f0-9]+)/);
-  const containerId = match?.[1] || "unknown";
-
-  console.log(`[openclaw] Deployed: ${slug} (${containerId})`);
-  return { containerId };
+  const data = (await res.json()) as { containerId: string };
+  console.log(`[openclaw] Deployed: ${opts.slug} (${data.containerId})`);
+  return { containerId: data.containerId };
 }
 
 export async function stopOpenClaw(slug: string): Promise<void> {
-  const s = slug.replace(/[^a-z0-9-]/g, "");
-  await executeOnServer(`docker stop "openclaw-${s}" 2>/dev/null || true`);
+  await provisionerRequest("/stop", { slug });
 }
 
 export async function startOpenClaw(slug: string): Promise<void> {
-  const s = slug.replace(/[^a-z0-9-]/g, "");
-  await executeOnServer(`docker start "openclaw-${s}" 2>/dev/null || true`);
+  await provisionerRequest("/start", { slug });
 }
 
 export async function removeOpenClaw(slug: string): Promise<void> {
-  const s = slug.replace(/[^a-z0-9-]/g, "");
-  await executeOnServer(`docker rm -f "openclaw-${s}" 2>/dev/null || true`);
+  await provisionerRequest("/remove", { slug });
 }
 
-export async function sendMessage(slug: string, to: string, text: string): Promise<void> {
-  const s = slug.replace(/[^a-z0-9-]/g, "");
-  const escaped = text.replace(/'/g, "'\\''");
-  await executeOnServer(
-    `docker exec "openclaw-${s}" npx openclaw message send --target "${to}" --message '${escaped}' 2>/dev/null || true`
-  );
+export async function getOpenClawStatus(
+  slug: string
+): Promise<{ state: string }> {
+  const res = await provisionerRequest("/status", { slug });
+  return (await res.json()) as { state: string };
 }

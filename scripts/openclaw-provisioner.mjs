@@ -1,0 +1,182 @@
+/**
+ * OpenClaw Provisioner — lightweight HTTP service that deploys OpenClaw
+ * containers via the Docker socket. Replaces the broken Coolify server
+ * command API approach.
+ *
+ * Run inside a container with Docker socket access:
+ *   docker run -d --name openclaw-provisioner --network coolify \
+ *     --restart unless-stopped \
+ *     -v /var/run/docker.sock:/var/run/docker.sock \
+ *     -v /data/openclaw:/data/openclaw \
+ *     -v /root/moolabiz/scripts/openclaw-provisioner.mjs:/app/openclaw-provisioner.mjs:ro \
+ *     -e PROVISIONER_KEY=<secret> \
+ *     node:22 node /app/openclaw-provisioner.mjs
+ */
+
+import http from "node:http";
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+
+const AUTH_KEY = process.env.PROVISIONER_KEY || "moolabiz-provision-key";
+const PORT = 9999;
+
+/** Read full request body as a string. */
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+
+/** Sanitise a slug to alphanumeric + hyphens only. */
+function safeSlug(slug) {
+  return String(slug).replace(/[^a-z0-9-]/g, "");
+}
+
+/** Send a JSON response. */
+function json(res, status, data) {
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(data));
+}
+
+// ─── Route handlers ────────────────────────────────────────────────
+
+async function handleDeploy(req, res) {
+  const body = await readBody(req);
+  const { slug, businessName, ownerPhone } = JSON.parse(body);
+  const s = safeSlug(slug);
+
+  if (!s) {
+    return json(res, 400, { error: "Invalid slug" });
+  }
+
+  // 1. Create config directory + file
+  const configDir = `/data/openclaw/${s}`;
+  fs.mkdirSync(configDir, { recursive: true });
+  fs.writeFileSync(
+    `${configDir}/config.json`,
+    JSON.stringify({
+      gateway: {
+        controlUi: { dangerouslyAllowHostHeaderOriginFallback: true },
+      },
+    })
+  );
+
+  // 2. Remove existing container (idempotent)
+  try {
+    execSync(`docker rm -f openclaw-${s} 2>/dev/null`);
+  } catch {
+    /* ignore */
+  }
+
+  // 3. Deploy new container
+  const cmd = [
+    "docker run -d",
+    `--name openclaw-${s}`,
+    "--network coolify",
+    "--restart unless-stopped",
+    "--memory 2g",
+    "--cpus 1",
+    `-v ${configDir}:/root/.openclaw-${s}`,
+    `-e NODE_OPTIONS="--max-old-space-size=1536"`,
+    `-e OPENCLAW_CONFIG_PATH=/root/.openclaw-${s}/config.json`,
+    '-l "traefik.enable=true"',
+    `-l "traefik.http.routers.oc-${s}.rule=Host(\`${s}.bot.moolabiz.shop\`) && PathPrefix(\`/onboard\`)"`,
+    `-l "traefik.http.routers.oc-${s}.entrypoints=https"`,
+    `-l "traefik.http.routers.oc-${s}.tls.certresolver=letsencrypt"`,
+    `-l "traefik.http.routers.oc-${s}.tls=true"`,
+    `-l "traefik.http.services.oc-${s}.loadbalancer.server.port=18789"`,
+    `-l "traefik.http.routers.oc-${s}.priority=100"`,
+    "moolabiz/openclaw:latest",
+    `--profile ${s} gateway --port 18789 --bind lan --allow-unconfigured`,
+  ].join(" ");
+
+  const containerId = execSync(cmd).toString().trim();
+  console.log(`[provisioner] deployed openclaw-${s} => ${containerId}`);
+
+  json(res, 200, { containerId, slug: s });
+}
+
+async function handleStop(req, res) {
+  const { slug } = JSON.parse(await readBody(req));
+  const s = safeSlug(slug);
+  execSync(`docker stop openclaw-${s} 2>/dev/null || true`);
+  console.log(`[provisioner] stopped openclaw-${s}`);
+  json(res, 200, { ok: true });
+}
+
+async function handleStart(req, res) {
+  const { slug } = JSON.parse(await readBody(req));
+  const s = safeSlug(slug);
+  execSync(`docker start openclaw-${s} 2>/dev/null || true`);
+  console.log(`[provisioner] started openclaw-${s}`);
+  json(res, 200, { ok: true });
+}
+
+async function handleRemove(req, res) {
+  const { slug } = JSON.parse(await readBody(req));
+  const s = safeSlug(slug);
+  execSync(`docker rm -f openclaw-${s} 2>/dev/null || true`);
+  console.log(`[provisioner] removed openclaw-${s}`);
+  json(res, 200, { ok: true });
+}
+
+async function handleStatus(req, res) {
+  const { slug } = JSON.parse(await readBody(req));
+  const s = safeSlug(slug);
+  try {
+    const state = execSync(
+      `docker inspect -f '{{.State.Status}}' openclaw-${s} 2>/dev/null`
+    )
+      .toString()
+      .trim();
+    json(res, 200, { slug: s, state });
+  } catch {
+    json(res, 200, { slug: s, state: "not_found" });
+  }
+}
+
+// ─── Server ────────────────────────────────────────────────────────
+
+const routes = {
+  "/deploy": handleDeploy,
+  "/stop": handleStop,
+  "/start": handleStart,
+  "/remove": handleRemove,
+  "/status": handleStatus,
+};
+
+const server = http.createServer(async (req, res) => {
+  // Auth check
+  if (req.headers["x-auth-key"] !== AUTH_KEY) {
+    res.writeHead(401);
+    res.end("Unauthorized");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    res.writeHead(405);
+    res.end("Method not allowed");
+    return;
+  }
+
+  const handler = routes[req.url];
+  if (!handler) {
+    res.writeHead(404);
+    res.end("Not found");
+    return;
+  }
+
+  try {
+    await handler(req, res);
+  } catch (err) {
+    console.error(`[provisioner] ${req.url} failed:`, err.message);
+    json(res, 500, { error: err.message });
+  }
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`[openclaw-provisioner] listening on port ${PORT}`);
+});

@@ -5,6 +5,7 @@ import { merchants } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { stopApplication } from "@/lib/coolify";
 import { stopOpenClaw } from "@/lib/openclaw";
+import { getStripe } from "@/lib/stripe";
 
 export async function POST() {
   try {
@@ -37,6 +38,16 @@ export async function POST() {
     // Also stop OpenClaw container
     try { await stopOpenClaw(merchant.slug); } catch (e) {
       console.error("Failed to stop OpenClaw:", e);
+    }
+
+    // Cancel the Stripe subscription so the merchant stops getting billed
+    if (merchant.subscriptionId) {
+      try {
+        const stripe = getStripe();
+        await stripe.subscriptions.cancel(merchant.subscriptionId);
+      } catch (stripeErr) {
+        console.error("Failed to cancel Stripe subscription:", stripeErr);
+      }
     }
 
     await db

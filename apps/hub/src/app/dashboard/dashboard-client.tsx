@@ -105,6 +105,34 @@ function ExternalLinkIcon({ className }: { className?: string }) {
   );
 }
 
+function DashboardNav({ current }: { current: "overview" | "products" | "orders" }) {
+  const tabs = [
+    { id: "overview" as const, label: "Overview", href: "/dashboard" },
+    { id: "products" as const, label: "Products", href: "/dashboard/products" },
+    { id: "orders" as const, label: "Orders", href: "/dashboard/orders" },
+  ];
+
+  return (
+    <nav className="flex gap-1 bg-slate-100 rounded-lg p-1">
+      {tabs.map((tab) => (
+        <a
+          key={tab.id}
+          href={tab.href}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            current === tab.id
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          {tab.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+export { DashboardNav };
+
 export function DashboardClient({ merchant }: { merchant: MerchantData }) {
   const [status, setStatus] = useState(merchant.status);
   const [loading, setLoading] = useState("");
@@ -182,6 +210,11 @@ export function DashboardClient({ merchant }: { merchant: MerchantData }) {
       )}
 
       <div className="max-w-2xl mx-auto px-4 mt-6 space-y-4">
+
+        {/* Navigation tabs */}
+        <div className="flex justify-center">
+          <DashboardNav current="overview" />
+        </div>
 
         {/* Store status card */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
