@@ -1,0 +1,78 @@
+import { Resend } from "resend";
+
+function getResend(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error("RESEND_API_KEY not set");
+  return new Resend(key);
+}
+
+export async function sendWelcomeEmail(opts: {
+  to: string;
+  businessName: string;
+  slug: string;
+  plan: string;
+}) {
+  const storeUrl = `https://${opts.slug}.bot.moolabiz.shop`;
+  const onboardUrl = `${storeUrl}/onboard`;
+  const dashboardUrl = `https://moolabiz.shop/dashboard`;
+
+  try {
+    const resend = getResend();
+    await resend.emails.send({
+      from: "MoolaBiz <no-reply@mail.moolabiz.shop>",
+      to: opts.to,
+      subject: `Welcome to MoolaBiz — ${opts.businessName} is live!`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
+          <h1 style="font-size: 24px; color: #0f172a; margin-bottom: 8px;">Welcome to MoolaBiz</h1>
+          <p style="color: #64748b; font-size: 15px; line-height: 1.6;">
+            Your store <strong>${opts.businessName}</strong> is being set up. Here's everything you need to get started.
+          </p>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0;">
+            <p style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px;">Your store URL</p>
+            <a href="${storeUrl}" style="font-size: 15px; color: #059669; font-weight: 600; word-break: break-all;">${storeUrl}</a>
+          </div>
+
+          <h2 style="font-size: 18px; color: #0f172a; margin: 32px 0 16px;">Next steps</h2>
+
+          <div style="margin-bottom: 16px;">
+            <p style="margin: 0; font-size: 15px;"><strong style="color: #0f172a;">1. Connect your WhatsApp</strong></p>
+            <p style="margin: 4px 0 0; color: #64748b; font-size: 14px;">
+              Open <a href="${onboardUrl}" style="color: #059669;">${onboardUrl}</a> and scan the QR code with your WhatsApp. Any WhatsApp number works — personal or business.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <p style="margin: 0; font-size: 15px;"><strong style="color: #0f172a;">2. Add your products</strong></p>
+            <p style="margin: 4px 0 0; color: #64748b; font-size: 14px;">
+              Once connected, message your bot with <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">/add-product Chicken Braai R45</code> to add products.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <p style="margin: 0; font-size: 15px;"><strong style="color: #0f172a;">3. Share your store</strong></p>
+            <p style="margin: 4px 0 0; color: #64748b; font-size: 14px;">
+              Send your store link to customers on WhatsApp. They can browse, add to cart, and order.
+            </p>
+          </div>
+
+          <a href="${dashboardUrl}" style="display: inline-block; background: #059669; color: white; font-weight: 600; font-size: 15px; padding: 12px 24px; border-radius: 10px; text-decoration: none; margin: 24px 0;">
+            Go to your dashboard
+          </a>
+
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
+
+          <p style="color: #94a3b8; font-size: 13px; line-height: 1.5;">
+            Plan: ${opts.plan}<br>
+            Need help? Reply to this email or contact support@moolabiz.shop<br><br>
+            MoolaBiz — Made in South Africa
+          </p>
+        </div>
+      `,
+    });
+    console.log(`[email] Welcome email sent to ${opts.to}`);
+  } catch (err) {
+    console.error(`[email] Failed to send welcome email:`, err);
+  }
+}

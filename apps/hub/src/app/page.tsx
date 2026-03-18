@@ -128,6 +128,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [formData, setFormData] = useState<SignupFormData>({
     businessName: "",
+    email: "",
     whatsappNumber: "+27",
     paymentProvider: "yoco",
     pin: "",
@@ -625,6 +626,22 @@ function SignupForm({
           onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
           className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base transition-colors"
         />
+      </div>
+
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
+          Email address
+        </label>
+        <input
+          id="email"
+          type="email"
+          required
+          placeholder="you@example.com"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base transition-colors"
+        />
+        <p className="text-xs text-slate-400 mt-1.5">We&apos;ll send your store details here.</p>
       </div>
 
       <div>

@@ -8,12 +8,14 @@ import { merchants } from "@/lib/db/schema";
 import { getPlan } from "@/lib/plans";
 import { createCheckoutSession, getStripePriceId } from "@/lib/stripe";
 import type { CheckoutResponse } from "@/lib/types";
+import { sendWelcomeEmail } from "@/lib/email";
 
 const checkoutSchema = z.object({
   businessName: z
     .string()
     .min(2, "Business name must be at least 2 characters")
     .max(60, "Business name must be under 60 characters"),
+  email: z.string().email("Enter a valid email address"),
   whatsappNumber: z
     .string()
     .regex(
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { businessName, whatsappNumber, paymentProvider, pin, plan: planId } = parsed.data;
+    const { businessName, email, whatsappNumber, paymentProvider, pin, plan: planId } = parsed.data;
     const plan = getPlan(planId);
 
     if (!plan) {
@@ -106,6 +108,7 @@ export async function POST(request: Request) {
     // Insert merchant as pending
     const [merchant] = await db.insert(merchants).values({
       businessName,
+      email,
       slug,
       whatsappNumber,
       paymentProvider,
@@ -150,6 +153,14 @@ export async function POST(request: Request) {
           { status: 500 }
         );
       }
+
+      // Send welcome email (non-blocking)
+      sendWelcomeEmail({
+        to: email,
+        businessName,
+        slug,
+        plan: plan.name + " — " + plan.priceDisplay + "/mo",
+      }).catch((err) => console.error("[email] Welcome email failed:", err));
 
       return NextResponse.json({
         success: true,

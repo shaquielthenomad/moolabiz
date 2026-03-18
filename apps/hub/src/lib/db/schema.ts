@@ -5,6 +5,7 @@ export const merchants = pgTable("merchants", {
   businessName: text("business_name").notNull(),
   slug: text("slug").notNull().unique(),
   whatsappNumber: text("whatsapp_number").notNull().unique(),
+  email: text("email"),
   paymentProvider: text("payment_provider").notNull(),
   pin: text("pin"),
   plan: text("plan").notNull().default("intro"),

@@ -149,19 +149,19 @@ function SetupContent() {
     },
     {
       label: "Store being deployed",
-      detail: "Your online store is being set up",
+      detail: "Your online store and WhatsApp bot are being set up",
       done: status === "success" || status === "already_active",
       active: status === "provisioning" || status === "loading",
     },
     {
-      label: "Setup instructions sent",
-      detail: "Instructions will arrive on your WhatsApp shortly",
-      done: status === "success" || status === "already_active",
-      active: status === "provisioning",
+      label: "Connect your WhatsApp",
+      detail: "Scan the QR code to link your WhatsApp number to your bot",
+      done: status === "already_active",
+      active: status === "success" || status === "provisioning",
     },
     {
-      label: "Confirm to go live",
-      detail: "Reply to the WhatsApp message to activate your store",
+      label: "Start selling",
+      detail: "Share your store link and start taking orders",
       done: status === "already_active",
       active: status === "success",
     },
@@ -280,20 +280,27 @@ function SetupContent() {
                   <StepList steps={timelineSteps} />
                 </div>
 
-                {/* WhatsApp Business reminder */}
-                <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
+                {/* Connect WhatsApp */}
+                <a
+                  href={`https://${subdomain}/onboard`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                      <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-800">
+                        Connect your WhatsApp
+                      </p>
+                      <p className="text-xs text-emerald-600 mt-0.5 leading-snug">
+                        Scan the QR code to link your WhatsApp number to your store bot. Use any WhatsApp number — personal or business.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      Download WhatsApp Business
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-snug">
-                      Available free on the Play Store and App Store. Your setup instructions will arrive on your WhatsApp number shortly.
-                    </p>
-                  </div>
-                </div>
+                </a>
               </div>
             </div>
 
