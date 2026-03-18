@@ -131,7 +131,7 @@ async function handlePaymentSucceeded(event: Record<string, unknown>, eventId: s
       PLAN: merchant.plan,
       WHATSAPP_VERIFY_TOKEN: merchant.whatsappVerifyToken || "",
       WHATSAPP_APP_SECRET: merchant.whatsappAppSecret || "",
-      OLLAMA_URL: "http://ollama-shared:11434",
+      OLLAMA_URL: "http://ollama:11434",
     });
 
     // 3. Trigger deployment
