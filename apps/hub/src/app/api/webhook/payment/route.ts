@@ -162,6 +162,7 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
     }
 
     await db.update(merchants).set({
+      status: "active",
       openclawContainerId,
       updatedAt: new Date(),
     }).where(eq(merchants.id, merchantId));

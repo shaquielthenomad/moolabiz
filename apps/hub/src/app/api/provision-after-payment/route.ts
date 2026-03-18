@@ -9,6 +9,8 @@ import {
   deployApplication,
 } from "@/lib/coolify";
 import { deployOpenClaw } from "@/lib/openclaw";
+import { sendWelcomeEmail } from "@/lib/email";
+import { getPlan } from "@/lib/plans";
 
 export async function POST(request: Request) {
   try {
@@ -113,11 +115,22 @@ export async function POST(request: Request) {
         console.error("[provision] OpenClaw failed (non-fatal):", ocErr);
       }
 
-      // 6. Update merchant with OpenClaw info
+      // 6. Update merchant — set ACTIVE + OpenClaw info
       await db
         .update(merchants)
-        .set({ openclawContainerId, updatedAt: new Date() })
+        .set({ status: "active", openclawContainerId, updatedAt: new Date() })
         .where(eq(merchants.id, merchant.id));
+
+      // 7. Send welcome email (after payment confirmed + store deploying)
+      if (merchant.email) {
+        const plan = getPlan(merchant.plan);
+        sendWelcomeEmail({
+          to: merchant.email,
+          businessName: merchant.businessName,
+          slug,
+          plan: plan ? `${plan.name} — ${plan.priceDisplay}/mo` : merchant.plan,
+        }).catch((err) => console.error("[email] Welcome email failed:", err));
+      }
 
       return NextResponse.json({
         success: true,

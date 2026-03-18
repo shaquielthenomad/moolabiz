@@ -154,13 +154,7 @@ export async function POST(request: Request) {
         );
       }
 
-      // Send welcome email (non-blocking)
-      sendWelcomeEmail({
-        to: email,
-        businessName,
-        slug,
-        plan: plan.name + " — " + plan.priceDisplay + "/mo",
-      }).catch((err) => console.error("[email] Welcome email failed:", err));
+      // Welcome email is sent AFTER payment confirmation (in provision-after-payment)
 
       return NextResponse.json({
         success: true,

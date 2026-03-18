@@ -220,7 +220,7 @@ export default function Home() {
           </div>
 
           <p className="mt-5 text-sm text-slate-400">
-            No credit card required &middot; Live in under 10 minutes
+            Cancel anytime &middot; Live in under 10 minutes
           </p>
         </div>
       </section>
@@ -449,7 +449,7 @@ export default function Home() {
               Simple, transparent pricing
             </h2>
             <p className="mt-3 text-slate-500">
-              Start with a 7-day free trial. Cancel anytime, no contracts.
+              Pay monthly, cancel anytime. No contracts.
             </p>
           </div>
 
@@ -532,7 +532,7 @@ export default function Home() {
             </a>
           </div>
           <p className="mt-4 text-sm text-slate-400">
-            No credit card required &middot; Cancel anytime
+            Pay monthly &middot; Cancel anytime
           </p>
         </div>
       </section>
@@ -719,7 +719,7 @@ function SignupForm({
       </button>
 
       <p className="text-xs text-slate-400 text-center">
-        7-day free trial &middot; Cancel anytime &middot; No credit card required
+        Pay monthly &middot; Cancel anytime &middot; No contracts
       </p>
     </form>
   );
@@ -815,7 +815,7 @@ function PlanPicker({
               {loading ? (
                 <span role="status" aria-label="Loading">Processing...</span>
               ) : (
-                "Start free trial"
+                "Get started"
               )}
             </button>
           </div>
