@@ -24,21 +24,29 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-RUN addgroup --system --gid 1001 nodejs \
+# libstdc++ is needed at runtime for better-sqlite3 native addon
+RUN apk add --no-cache libstdc++ \
+ && addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs \
  && mkdir -p /data && chown nextjs:nodejs /data
-
-# static assets (always present after a successful build)
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # standalone output (contains server.js and a trimmed node_modules)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
-# public/ is optional — the COPY will succeed even if the directory is empty
-# because Next.js standalone serves public/ from the project root at runtime.
-# We use a shell copy so a missing directory doesn't break the build.
+# static assets
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# better-sqlite3 is a serverExternalPackage — standalone output does NOT
+# bundle it, so we must copy the native addon from the deps stage.
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/bindings ./node_modules/bindings
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/prebuild-install ./node_modules/prebuild-install
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/node-abi ./node_modules/node-abi
+
+# public/ assets
 RUN mkdir -p ./public
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 EXPOSE 3000
