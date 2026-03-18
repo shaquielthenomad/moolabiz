@@ -21,6 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="whatsapp" content={process.env.WHATSAPP_NUMBER || ""} />
+      </head>
       <body className={`${geistSans.variable} antialiased bg-background text-foreground`}>
         {children}
       </body>

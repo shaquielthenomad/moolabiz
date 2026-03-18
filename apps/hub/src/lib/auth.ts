@@ -1,8 +1,11 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
 
-const SESSION_SECRET =
-  process.env.SESSION_SECRET || process.env.ADMIN_SECRET || "fallback";
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET || process.env.ADMIN_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET or ADMIN_SECRET must be set");
+  return secret;
+}
 const COOKIE_NAME = "moolabiz_session";
 
 export function createSessionToken(merchantId: string): string {
@@ -11,7 +14,7 @@ export function createSessionToken(merchantId: string): string {
     exp: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
   });
   const iv = crypto.randomBytes(16);
-  const key = crypto.scryptSync(SESSION_SECRET, "salt", 32);
+  const key = crypto.scryptSync(getSessionSecret(), "salt", 32);
   const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
   let encrypted = cipher.update(payload, "utf8", "hex");
   encrypted += cipher.final("hex");
@@ -24,7 +27,7 @@ export function verifySessionToken(
   try {
     const [ivHex, encrypted] = token.split(":");
     const iv = Buffer.from(ivHex, "hex");
-    const key = crypto.scryptSync(SESSION_SECRET, "salt", 32);
+    const key = crypto.scryptSync(getSessionSecret(), "salt", 32);
     const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
     let decrypted = decipher.update(encrypted, "hex", "utf8");
     decrypted += decipher.final("utf8");

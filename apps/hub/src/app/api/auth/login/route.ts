@@ -5,6 +5,23 @@ import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { createSessionToken } from "@/lib/auth";
 
+// Rate limiting: max 5 attempts per phone number per 15 minutes
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000;
+
+function checkLoginRate(phone: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(phone);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(phone, { count: 1, resetAt: now + WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= MAX_ATTEMPTS) return false;
+  entry.count++;
+  return true;
+}
+
 export async function POST(request: Request) {
   try {
     const { whatsappNumber, pin } = await request.json();
@@ -18,6 +35,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Please enter your number and PIN." },
         { status: 400 }
+      );
+    }
+
+    // Rate limit check
+    if (!checkLoginRate(whatsappNumber)) {
+      return NextResponse.json(
+        { error: "Too many login attempts. Please wait 15 minutes." },
+        { status: 429 }
       );
     }
 
