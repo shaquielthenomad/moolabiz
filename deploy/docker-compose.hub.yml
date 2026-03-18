@@ -12,7 +12,7 @@ services:
       - COOLIFY_PROJECT_UUID=${COOLIFY_PROJECT_UUID}
       - COOLIFY_SERVER_UUID=${COOLIFY_SERVER_UUID}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

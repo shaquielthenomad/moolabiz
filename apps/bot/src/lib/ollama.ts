@@ -25,6 +25,7 @@ export async function chat(
       stream: false,
       messages: [{ role: "system", content: systemPrompt }, ...messages],
     }),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {

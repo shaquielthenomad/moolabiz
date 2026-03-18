@@ -16,13 +16,13 @@ function SetupContent() {
           Payment received!
         </h1>
         <p className="text-gray-600">
-          Your shop bot is being set up at:
+          Your bot will be live at:
         </p>
         <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-800 font-mono text-sm break-all">
           https://{subdomain}
         </div>
         <p className="text-sm text-gray-500">
-          This usually takes 2-5 minutes. You&apos;ll get a WhatsApp message when it&apos;s ready.
+          This usually takes 5-10 minutes. You&apos;ll get a WhatsApp message when it&apos;s ready.
         </p>
 
         <div className="text-left space-y-4 bg-emerald-50 rounded-xl p-5 border border-emerald-200">

@@ -45,12 +45,12 @@ JSON_BODY=$(jq -n \
     instant_deploy: false
   }')
 
-APP_RESPONSE=$(curl -s -X POST "${COOLIFY_API_URL}/api/v1/applications/public" \
+APP_RESPONSE=$(curl -s -X POST "${COOLIFY_API_URL}/api/v1/applications/dockerfile" \
   -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
   -H "Content-Type: application/json" \
   -d "$JSON_BODY")
 
-APP_UUID=$(echo "$APP_RESPONSE" | grep -o '"uuid":"[^"]*"' | head -1 | cut -d'"' -f4)
+APP_UUID=$(echo "$APP_RESPONSE" | jq -r '.uuid')
 
 if [ -z "$APP_UUID" ]; then
   echo "ERROR: Failed to create application"

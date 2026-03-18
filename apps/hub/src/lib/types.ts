@@ -27,6 +27,8 @@ export interface CoolifyApplication {
 
 export type PlanType = "starter" | "pro" | "business";
 
+export type MerchantStatus = "pending" | "provisioning" | "active" | "suspended" | "cancelled";
+
 export interface Plan {
   id: PlanType;
   name: string;

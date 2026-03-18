@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { z } from "zod";
 import {
   createApplication,
@@ -59,19 +60,13 @@ function slugify(name: string): string {
 
 export async function POST(request: Request) {
   try {
-    // Rate limiting by IP
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-
-    if (isRateLimited(ip)) {
+    // Admin-only: require ADMIN_SECRET
+    const adminSecret = process.env.ADMIN_SECRET;
+    const auth = request.headers.get("authorization");
+    if (!adminSecret || auth !== `Bearer ${adminSecret}`) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Too many requests. Please try again later.",
-        } satisfies ProvisionResponse,
-        { status: 429 }
+        { success: false, error: "Unauthorized" } satisfies ProvisionResponse,
+        { status: 401 }
       );
     }
 
@@ -87,9 +82,10 @@ export async function POST(request: Request) {
     }
 
     const { businessName, whatsappNumber, paymentProvider } = parsed.data;
+    const plan = (body.plan as string) || "starter";
     const slug = slugify(businessName);
 
-    if (!slug || slug.length < 3) {
+    if (!slug || slug.length < 3 || !/[a-z0-9]/.test(slug)) {
       return NextResponse.json(
         {
           success: false,
@@ -121,6 +117,10 @@ export async function POST(request: Request) {
       BUSINESS_SLUG: slug,
       WHATSAPP_NUMBER: whatsappNumber,
       PAYMENT_PROVIDER: paymentProvider,
+      PLAN: plan,
+      WHATSAPP_VERIFY_TOKEN: crypto.randomBytes(32).toString("hex"),
+      WHATSAPP_APP_SECRET: crypto.randomBytes(32).toString("hex"),
+      OLLAMA_URL: "http://ollama:11434",
     });
 
     // 3. Trigger deployment

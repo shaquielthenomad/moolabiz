@@ -33,14 +33,13 @@ export async function createApplication(
   domains: string
 ): Promise<CoolifyApplication> {
   const cfg = getConfig();
-  const res = await fetch(`${cfg.apiUrl}/api/v1/applications/public`, {
+  const res = await fetch(`${cfg.apiUrl}/api/v1/applications/dockerfile`, {
     method: "POST",
     headers: headers(cfg.apiToken),
     body: JSON.stringify({
       project_uuid: cfg.projectUuid,
       server_uuid: cfg.serverUuid,
       environment_name: "production",
-      type: "dockerfile",
       name: `bot-${slug}`,
       description: `MoolaBiz bot for ${businessName}`,
       domains,
@@ -109,5 +108,39 @@ export async function deployApplication(appUuid: string): Promise<void> {
     const body = await res.text();
     console.error(`Coolify deploy failed (${res.status}):`, body);
     throw new Error("Failed to deploy application");
+  }
+}
+
+export async function stopApplication(appUuid: string): Promise<void> {
+  const cfg = getConfig();
+  const res = await fetch(
+    `${cfg.apiUrl}/api/v1/applications/${appUuid}/stop`,
+    {
+      method: "POST",
+      headers: headers(cfg.apiToken),
+    }
+  );
+
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Coolify stop failed (${res.status}):`, body);
+    throw new Error("Failed to stop application");
+  }
+}
+
+export async function startApplication(appUuid: string): Promise<void> {
+  const cfg = getConfig();
+  const res = await fetch(
+    `${cfg.apiUrl}/api/v1/applications/${appUuid}/start`,
+    {
+      method: "POST",
+      headers: headers(cfg.apiToken),
+    }
+  );
+
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Coolify start failed (${res.status}):`, body);
+    throw new Error("Failed to start application");
   }
 }

@@ -29,6 +29,12 @@ export async function getSoulPrompt(): Promise<string> {
     );
     content = content.replace(/\{\{BUSINESS_NAME\}\}/g, businessName);
 
+    const whatsappNumber = process.env.WHATSAPP_NUMBER || "";
+    content = content.replace(/\{\{WHATSAPP_NUMBER\}\}/g, whatsappNumber);
+
+    const paymentProvider = process.env.PAYMENT_PROVIDER || "";
+    content = content.replace(/\{\{PAYMENT_PROVIDER\}\}/g, paymentProvider);
+
     return content;
   } catch {
     console.warn(

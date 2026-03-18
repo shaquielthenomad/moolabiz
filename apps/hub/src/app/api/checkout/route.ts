@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { merchants } from "@/lib/db/schema";
 import { getPlan } from "@/lib/plans";
 import type { CheckoutResponse } from "@/lib/types";
 
@@ -17,6 +21,11 @@ const checkoutSchema = z.object({
   paymentProvider: z.enum(["yoco", "ozow", "payfast"]),
   plan: z.enum(["starter", "pro", "business"]),
 });
+
+const RESERVED_SLUGS = [
+  "api", "www", "mail", "admin", "ns", "ns1", "ns2",
+  "ftp", "smtp", "status", "app", "dashboard", "hub",
+];
 
 function slugify(name: string): string {
   return name
@@ -51,6 +60,56 @@ export async function POST(request: Request) {
     }
 
     const slug = slugify(businessName);
+
+    if (!slug || slug.length < 3 || !/[a-z0-9]/.test(slug)) {
+      return NextResponse.json(
+        { success: false, error: "Business name is too short. Try a longer name." } satisfies CheckoutResponse,
+        { status: 400 }
+      );
+    }
+
+    if (RESERVED_SLUGS.includes(slug)) {
+      return NextResponse.json(
+        { success: false, error: "That name is reserved. Please choose a different name." } satisfies CheckoutResponse,
+        { status: 400 }
+      );
+    }
+
+    // Check for duplicate slug
+    const existingSlug = await db.select().from(merchants).where(eq(merchants.slug, slug)).limit(1);
+    if (existingSlug.length > 0) {
+      return NextResponse.json(
+        { success: false, error: "A bot for a similar business name already exists. Try adding your area or a unique word." } satisfies CheckoutResponse,
+        { status: 409 }
+      );
+    }
+
+    // Check for duplicate WhatsApp number
+    const existingPhone = await db.select().from(merchants).where(eq(merchants.whatsappNumber, whatsappNumber)).limit(1);
+    if (existingPhone.length > 0) {
+      return NextResponse.json(
+        { success: false, error: "This WhatsApp number is already registered. Contact support if you need help." } satisfies CheckoutResponse,
+        { status: 409 }
+      );
+    }
+
+    // Generate secrets for the bot
+    const whatsappVerifyToken = crypto.randomBytes(32).toString("hex");
+    const whatsappAppSecret = crypto.randomBytes(32).toString("hex");
+
+    // Insert merchant as pending
+    const [merchant] = await db.insert(merchants).values({
+      businessName,
+      slug,
+      whatsappNumber,
+      paymentProvider,
+      plan: planId,
+      status: "pending",
+      subdomain: `${slug}.bot.moolabiz.shop`,
+      whatsappVerifyToken,
+      whatsappAppSecret,
+    }).returning();
+
     const YOCO_SECRET_KEY = process.env.YOCO_SECRET_KEY;
 
     if (!YOCO_SECRET_KEY) {
@@ -76,10 +135,7 @@ export async function POST(request: Request) {
         cancelUrl: `${baseUrl}/?cancelled=true`,
         failureUrl: `${baseUrl}/?failed=true`,
         metadata: {
-          businessName,
-          whatsappNumber,
-          paymentProvider,
-          plan: planId,
+          merchantId: merchant.id,
           slug,
         },
       }),
@@ -88,6 +144,8 @@ export async function POST(request: Request) {
     if (!res.ok) {
       const errBody = await res.text();
       console.error(`Yoco checkout failed (${res.status}):`, errBody);
+      // Clean up the pending merchant
+      await db.delete(merchants).where(eq(merchants.id, merchant.id));
       return NextResponse.json(
         { success: false, error: "Could not create checkout. Please try again." } satisfies CheckoutResponse,
         { status: 500 }
@@ -95,6 +153,11 @@ export async function POST(request: Request) {
     }
 
     const checkout = await res.json();
+
+    // Store checkout ID on merchant
+    await db.update(merchants)
+      .set({ yocoCheckoutId: checkout.id, updatedAt: new Date() })
+      .where(eq(merchants.id, merchant.id));
 
     return NextResponse.json({
       success: true,

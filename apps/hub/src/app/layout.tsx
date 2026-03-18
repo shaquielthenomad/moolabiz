@@ -11,23 +11,16 @@ export const metadata: Metadata = {
   title: "MoolaBiz — Free WhatsApp Shop Bot for South African Traders",
   description:
     "Get your own AI-powered WhatsApp shop bot for free. No tech skills needed. Built for South African traders. Start selling on WhatsApp in 8 minutes.",
-  keywords: [
-    "WhatsApp shop",
-    "South Africa",
-    "informal traders",
-    "free shop bot",
-    "MoolaBiz",
-  ],
   openGraph: {
     title: "MoolaBiz — Free WhatsApp Shop Bot",
     description:
       "Your 24/7 WhatsApp Shop Bot — Free Forever. Built for South African traders.",
     type: "website",
+    url: "https://moolabiz.shop",
+    locale: "en_ZA",
   },
-  other: {
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
+  twitter: {
+    card: "summary_large_image",
   },
 };
 

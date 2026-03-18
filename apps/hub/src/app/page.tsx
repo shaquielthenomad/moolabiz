@@ -121,7 +121,7 @@ export default function Home() {
           { icon: "\u{1F5E3}\uFE0F", title: "Your Language", sub: "English, Zulu, Xhosa, Sotho, Afrikaans & more" },
         ].map((v) => (
           <div key={v.title}>
-            <div className="text-4xl mb-2">{v.icon}</div>
+            <div className="text-4xl mb-2" aria-hidden="true">{v.icon}</div>
             <h3 className="font-bold text-base text-gray-900">{v.title}</h3>
             <p className="text-sm text-gray-600 mt-1">{v.sub}</p>
           </div>
@@ -146,7 +146,7 @@ export default function Home() {
           />
         )}
         {stage === "error" && (
-          <div className="max-w-md mx-auto bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm text-center">
+          <div role="alert" className="max-w-md mx-auto bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm text-center">
             {error}
             <button
               onClick={() => setStage("form")}
@@ -213,16 +213,18 @@ function SignupForm({
         <input
           type="tel"
           required
+          pattern="\+27\d{9}"
+          title="Enter your number like +27821234567"
           placeholder="+27821234567"
           value={formData.whatsappNumber}
           onChange={(e) => {
-            let val = e.target.value;
+            let val = e.target.value.replace(/[\s\-()]/g, "");
             if (!val.startsWith("+27")) val = "+27";
             setFormData({ ...formData, whatsappNumber: val });
           }}
           className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base"
         />
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-gray-500 mt-1">
           We&apos;ll never share your number
         </p>
       </label>
@@ -256,7 +258,7 @@ function SignupForm({
         Choose Your Plan &rarr;
       </button>
 
-      <p className="text-xs text-gray-400 text-center">
+      <p className="text-xs text-gray-500 text-center">
         Cancel anytime &middot; No long-term contracts
       </p>
     </form>
@@ -286,7 +288,7 @@ function PlanPicker({
       </div>
 
       {error && (
-        <div className="max-w-md mx-auto bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm text-center">
+        <div role="alert" className="max-w-md mx-auto bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm text-center">
           {error}
         </div>
       )}
@@ -328,7 +330,11 @@ function PlanPicker({
                   : "bg-gray-100 hover:bg-gray-200 text-gray-900"
               } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
-              {loading ? "Processing..." : `Get ${plan.name}`}
+              {loading ? (
+                <span role="status" aria-label="Loading">Processing...</span>
+              ) : (
+                `Get ${plan.name}`
+              )}
             </button>
           </div>
         ))}

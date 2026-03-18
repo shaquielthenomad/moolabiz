@@ -16,6 +16,12 @@ services:
       - OLLAMA_URL=http://ollama:11434
     volumes:
       - ../workspace:/workspace:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       ollama:
         condition: service_healthy
@@ -27,7 +33,7 @@ services:
     image: ollama/ollama:0.6
     volumes:
       - ollama_data:/root/.ollama
-    command: sh -c "ollama serve & sleep 5 && ollama pull llama3.2:3b && wait"
+    command: sh -c "ollama serve & sleep 5 && (ollama list | grep -q llama3.2:3b || ollama pull llama3.2:3b) && wait"
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
@@ -40,7 +46,6 @@ services:
 networks:
   internal:
     driver: bridge
-    internal: true
 
 volumes:
   ollama_data:
