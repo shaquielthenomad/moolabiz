@@ -22,6 +22,46 @@ function formatPrice(cents: number): string {
   return `R${(cents / 100).toFixed(2)}`;
 }
 
+function ArrowLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  );
+}
+
+function PackageIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <line x1="16.5" y1="9.4" x2="7.5" y2="4.21" />
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+      <line x1="12" y1="22.08" x2="12" y2="12" />
+    </svg>
+  );
+}
+
 export default function CartPage() {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -68,11 +108,11 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     if (!name.trim()) {
-      setError("Please enter your name");
+      setError("Please enter your name.");
       return;
     }
     if (!phone.trim() || phone.replace(/\D/g, "").length < 9) {
-      setError("Please enter a valid phone number");
+      setError("Please enter a valid phone number.");
       return;
     }
 
@@ -96,16 +136,13 @@ export default function CartPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Something went wrong");
+        setError(data.error || "Something went wrong. Please try again.");
         setSubmitting(false);
         return;
       }
 
-      // Clear cart
       localStorage.removeItem("moolabiz-cart");
       setCart([]);
-
-      // Redirect to order confirmation
       router.push(`/order/${data.orderId}`);
     } catch {
       setError("Network error. Please try again.");
@@ -115,73 +152,85 @@ export default function CartPage() {
 
   if (cart.length === 0) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4 text-center">
-        <p className="text-5xl">🛒</p>
-        <p className="text-lg font-semibold text-neutral-600">Your cart is empty</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-slate-50 px-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+          <PackageIcon className="w-8 h-8 text-slate-300" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-base font-semibold text-slate-800">Your cart is empty</p>
+          <p className="text-sm text-slate-500">Add some products to get started.</p>
+        </div>
         <Link
           href="/"
-          className="rounded-xl bg-amber-500 px-6 py-3 font-bold text-white shadow hover:bg-amber-600 transition-colors"
+          className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition-colors"
         >
-          Browse Products
+          Browse products
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-slate-50 pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-gradient-to-r from-amber-600 to-yellow-500 px-4 py-4 shadow-md">
+      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm px-4 py-3">
         <div className="mx-auto flex max-w-xl items-center gap-3">
-          <Link href="/" className="text-white text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center">
-            ←
+          <Link
+            href="/"
+            className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
+            aria-label="Back to shop"
+          >
+            <ArrowLeftIcon className="w-5 h-5 text-slate-600" />
           </Link>
-          <h1 className="text-lg font-bold text-white">Your Cart</h1>
+          <h1 className="text-base font-semibold text-slate-900">Your cart</h1>
+          <span className="ml-auto text-xs text-slate-500">
+            {cart.reduce((s, i) => s + i.quantity, 0)} items
+          </span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-xl px-4 py-5">
+      <main className="mx-auto max-w-xl px-4 py-5 space-y-5">
         {/* Cart items */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {cart.map((item) => (
             <div
               key={item.product.id}
-              className="flex items-center gap-3 rounded-xl border border-amber-100 bg-white p-3 shadow-sm"
+              className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3 shadow-sm"
             >
               {item.product.image_url ? (
                 <img
                   src={item.product.image_url}
                   alt={item.product.name}
-                  className="h-16 w-16 rounded-lg object-cover shrink-0"
+                  className="h-14 w-14 rounded-lg object-cover shrink-0 bg-slate-100"
                 />
               ) : (
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-2xl">
-                  📦
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                  <PackageIcon className="w-6 h-6 text-slate-300" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-neutral-800 truncate">
+                <p className="text-sm font-semibold text-slate-900 truncate">
                   {item.product.name}
                 </p>
-                {/* Per-unit price */}
-                <p className="text-xs text-neutral-400">{formatPrice(item.product.price)} each</p>
-                {/* Line total */}
-                <p className="text-base font-extrabold text-emerald-600">
+                <p className="text-xs text-slate-400 mt-0.5">{formatPrice(item.product.price)} each</p>
+                <p className="text-sm font-bold text-emerald-600 mt-0.5">
                   {formatPrice(item.product.price * item.quantity)}
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => updateQuantity(item.product.id, -1)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-lg font-bold text-neutral-600 active:bg-neutral-200 transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors text-base leading-none"
                   aria-label={`Remove one ${item.product.name}`}
                 >
                   −
                 </button>
-                <span className="w-6 text-center font-bold text-base">{item.quantity}</span>
+                <span className="w-7 text-center text-sm font-semibold text-slate-900">
+                  {item.quantity}
+                </span>
                 <button
                   onClick={() => updateQuantity(item.product.id, 1)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-700 active:bg-emerald-200 transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors text-base leading-none"
                   aria-label={`Add one ${item.product.name}`}
                 >
                   +
@@ -191,75 +240,92 @@ export default function CartPage() {
           ))}
         </div>
 
-        {/* Total (inline summary — visible while scrolling form) */}
-        <div className="mt-5 flex items-center justify-between rounded-xl bg-amber-50 px-4 py-3 border border-amber-200">
-          <span className="text-sm font-semibold text-neutral-600">Order Total</span>
-          <span className="text-2xl font-bold text-amber-700">{formatPrice(total)}</span>
+        {/* Order summary */}
+        <div className="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500">Subtotal</span>
+            <span className="font-semibold text-slate-900">{formatPrice(total)}</span>
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-sm font-semibold text-slate-700">Order total</span>
+            <span className="text-xl font-bold text-slate-900">{formatPrice(total)}</span>
+          </div>
         </div>
 
         {/* Customer details */}
-        <div className="mt-6 space-y-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-500">
-            Your Details
-          </h2>
-          <input
-            type="text"
-            placeholder="Your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3.5 text-base outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 min-h-[50px]"
-          />
-          <input
-            type="tel"
-            placeholder="Phone number (e.g. 072 123 4567)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3.5 text-base outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 min-h-[50px]"
-          />
+        <div className="rounded-xl bg-white border border-slate-200 p-4 shadow-sm space-y-3">
+          <h2 className="text-sm font-semibold text-slate-700">Your details</h2>
+          <div className="space-y-2.5">
+            <input
+              type="text"
+              placeholder="Full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200 transition-all min-h-[44px]"
+            />
+            <input
+              type="tel"
+              placeholder="Phone number (e.g. 072 123 4567)"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200 transition-all min-h-[44px]"
+            />
+          </div>
         </div>
 
         {error && (
-          <div className="mt-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 border border-red-200">
+          <div className="flex items-start gap-2.5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-4 h-4 shrink-0 mt-0.5 text-red-500"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"
+                clipRule="evenodd"
+              />
+            </svg>
             {error}
           </div>
         )}
 
-        {/* Inline checkout button (kept for non-sticky contexts / accessibility) */}
         <button
           onClick={handleCheckout}
           disabled={submitting}
-          className="mt-6 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-4 text-lg font-bold text-white shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 min-h-[56px]"
+          className="w-full rounded-lg bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
         >
-          {submitting ? "Placing order..." : `Pay ${formatPrice(total)}`}
+          {submitting ? "Placing order..." : `Place order — ${formatPrice(total)}`}
         </button>
 
         <Link
           href="/"
-          className="mt-4 block text-center text-sm font-medium text-amber-600 hover:text-amber-700 py-2"
+          className="flex items-center justify-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors py-1"
         >
-          ← Back to shop
+          <ArrowLeftIcon className="w-4 h-4" />
+          Continue shopping
         </Link>
       </main>
 
-      {/* ── Sticky order summary bar ─────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-4 py-3">
+      {/* Sticky bottom bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] px-4 py-3">
         <div className="mx-auto max-w-xl flex items-center gap-3">
-          {/* Mini total */}
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 leading-none mb-0.5">
-              Order Total
+            <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider leading-none mb-0.5">
+              Total
             </p>
-            <p className="text-xl font-extrabold text-amber-700 leading-none">
+            <p className="text-lg font-bold text-slate-900 leading-none">
               {formatPrice(total)}
             </p>
           </div>
-          {/* Pay Now button */}
           <button
             onClick={handleCheckout}
             disabled={submitting}
-            className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-3.5 text-base font-extrabold text-white shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 min-h-[50px] min-w-[120px]"
+            className="shrink-0 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] min-w-[120px]"
           >
-            {submitting ? "Placing..." : `Pay Now →`}
+            {submitting ? "Placing..." : "Place order"}
           </button>
         </div>
       </div>

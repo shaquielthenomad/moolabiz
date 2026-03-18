@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { merchants, webhookEvents } from "@/lib/db/schema";
+import { constructWebhookEvent } from "@/lib/stripe";
 import {
   createApplication,
   setEnvironmentVariables,
@@ -15,39 +16,26 @@ export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
 
-    // Body size check
     if (rawBody.length > 1_000_000) {
       return NextResponse.json({ error: "Payload too large" }, { status: 413 });
     }
 
-    // Verify webhook signature — FAIL CLOSED
-    const signature = request.headers.get("x-yoco-signature") || "";
-    const webhookSecret = process.env.YOCO_WEBHOOK_SECRET;
-
-    if (!webhookSecret) {
-      console.error("YOCO_WEBHOOK_SECRET is not configured — rejecting webhook");
-      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
-    }
-
+    // Verify Stripe webhook signature
+    const signature = request.headers.get("stripe-signature");
     if (!signature) {
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
 
-    const expected = crypto
-      .createHmac("sha256", webhookSecret)
-      .update(rawBody)
-      .digest("hex");
-
-    const sigBuf = Buffer.from(signature);
-    const expBuf = Buffer.from(expected);
-    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-      console.error("Invalid Yoco webhook signature");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let event;
+    try {
+      event = await constructWebhookEvent(rawBody, signature);
+    } catch (err) {
+      console.error("Stripe webhook verification failed:", err);
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const event = JSON.parse(rawBody);
-    const eventId = event.id || event.payload?.id || crypto.randomUUID();
-    const eventType = event.type || "unknown";
+    const eventId = event.id;
+    const eventType = event.type;
 
     // Idempotency check
     const existing = await db.select().from(webhookEvents)
@@ -64,13 +52,16 @@ export async function POST(request: Request) {
       processed: false,
     });
 
-    // Dispatch by event type
-    if (eventType === "payment.succeeded") {
-      await handlePaymentSucceeded(event, eventId);
-    } else if (eventType === "subscription.cancelled") {
-      await handleSubscriptionCancelled(event, eventId);
-    } else if (eventType === "subscription.payment_failed") {
-      await handlePaymentFailed(event, eventId);
+    // Dispatch by event type — cast to generic shape for handlers
+    const obj = event.data.object as Record<string, unknown>;
+    if (eventType === "checkout.session.completed") {
+      await handleCheckoutCompleted(obj, eventId);
+    } else if (eventType === "customer.subscription.deleted") {
+      await handleSubscriptionCancelled(obj, eventId);
+    } else if (eventType === "invoice.payment_failed") {
+      await handlePaymentFailed(obj, eventId);
+    } else if (eventType === "customer.subscription.updated") {
+      await handleSubscriptionUpdated(obj, eventId);
     }
 
     // Mark event as processed
@@ -80,48 +71,49 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (err) {
-    console.error("Payment webhook error:", err);
+    console.error("Stripe webhook error:", err);
     return NextResponse.json({ received: true, error: "Processing failed" });
   }
 }
 
-async function handlePaymentSucceeded(event: Record<string, unknown>, eventId: string) {
-  const metadata = (event.payload as Record<string, unknown>)?.metadata as Record<string, string> ||
-    (event as Record<string, unknown>).metadata as Record<string, string> || {};
-
+async function handleCheckoutCompleted(session: Record<string, unknown>, eventId: string) {
+  const metadata = (session.metadata || {}) as Record<string, string>;
   const merchantId = metadata.merchantId;
+  const subscriptionId = session.subscription as string;
+
   if (!merchantId) {
-    console.error("[payment] No merchantId in metadata:", metadata);
+    console.error("[stripe] No merchantId in checkout session metadata");
     return;
   }
 
-  // Look up merchant
   const [merchant] = await db.select().from(merchants)
     .where(eq(merchants.id, merchantId)).limit(1);
 
   if (!merchant) {
-    console.error("[payment] Merchant not found:", merchantId);
+    console.error("[stripe] Merchant not found:", merchantId);
     return;
   }
 
-  // Already provisioned? Skip (idempotent)
   if (merchant.status === "active" || merchant.status === "provisioning") {
-    console.log("[payment] Merchant already active/provisioning:", merchantId);
+    console.log("[stripe] Merchant already active/provisioning:", merchantId);
     return;
   }
 
-  // Atomic status transition — prevents race with provision-after-payment
+  // Atomic status transition
   const updated = await db.update(merchants)
-    .set({ status: "provisioning", updatedAt: new Date() })
+    .set({
+      status: "provisioning",
+      subscriptionId: subscriptionId || null,
+      updatedAt: new Date(),
+    })
     .where(and(eq(merchants.id, merchantId), eq(merchants.status, "pending")))
     .returning();
 
   if (updated.length === 0) {
-    console.log("[payment] Merchant already claimed by another process:", merchantId);
+    console.log("[stripe] Merchant already claimed:", merchantId);
     return;
   }
 
-  // Link webhook event to merchant
   await db.update(webhookEvents)
     .set({ merchantId })
     .where(eq(webhookEvents.eventId, eventId));
@@ -129,13 +121,11 @@ async function handlePaymentSucceeded(event: Record<string, unknown>, eventId: s
   const subdomain = merchant.subdomain || `${merchant.slug}.bot.moolabiz.shop`;
   const domains = `https://${subdomain}`;
 
-  console.log(`[payment] Provisioning bot for ${merchant.businessName} (${merchant.slug})`);
+  console.log(`[stripe] Provisioning bot for ${merchant.businessName} (${merchant.slug})`);
 
   try {
-    // 1. Create application on Coolify
     const app = await createApplication(merchant.slug, merchant.businessName, domains);
 
-    // 2. Set environment variables
     await setEnvironmentVariables(app.uuid, {
       BUSINESS_NAME: merchant.businessName,
       BUSINESS_SLUG: merchant.slug,
@@ -146,20 +136,16 @@ async function handlePaymentSucceeded(event: Record<string, unknown>, eventId: s
       DB_PATH: "/data/store.db",
     });
 
-    // 3. Trigger deployment
     await deployApplication(app.uuid);
 
-    // 4. Update merchant to active
     await db.update(merchants).set({
-      status: "active",
       coolifyAppUuid: app.uuid,
-      subscriptionId: (event.payload as Record<string, unknown>)?.subscriptionId as string || null,
       updatedAt: new Date(),
     }).where(eq(merchants.id, merchantId));
 
-    console.log(`[payment] Bot provisioned: ${subdomain} (app: ${app.uuid})`);
+    console.log(`[stripe] Bot deploying: ${subdomain} (app: ${app.uuid})`);
   } catch (err) {
-    console.error("[payment] Provisioning failed:", err);
+    console.error("[stripe] Provisioning failed:", err);
     await db.update(merchants).set({
       status: "pending",
       updatedAt: new Date(),
@@ -167,72 +153,71 @@ async function handlePaymentSucceeded(event: Record<string, unknown>, eventId: s
   }
 }
 
-async function handleSubscriptionCancelled(event: Record<string, unknown>, eventId: string) {
-  const subscriptionId = (event.payload as Record<string, unknown>)?.subscriptionId as string ||
-    (event as Record<string, string>).subscriptionId;
+async function handleSubscriptionCancelled(subscription: Record<string, unknown>, eventId: string) {
+  const subscriptionId = subscription.id as string;
 
-  if (!subscriptionId) {
-    console.error("[subscription] No subscriptionId in cancel event");
-    return;
-  }
+  if (!subscriptionId) return;
 
   const [merchant] = await db.select().from(merchants)
     .where(eq(merchants.subscriptionId, subscriptionId)).limit(1);
 
-  if (!merchant || !merchant.coolifyAppUuid) {
-    console.error("[subscription] Merchant not found for subscription:", subscriptionId);
-    return;
+  if (!merchant || !merchant.coolifyAppUuid) return;
+
+  console.log(`[stripe] Cancelling bot for ${merchant.businessName}`);
+
+  try { await stopApplication(merchant.coolifyAppUuid); } catch (err) {
+    console.error("[stripe] Failed to stop app:", err);
   }
 
-  console.log(`[subscription] Cancelling bot for ${merchant.businessName}`);
-
-  try {
-    await stopApplication(merchant.coolifyAppUuid);
-  } catch (err) {
-    console.error("[subscription] Failed to stop app:", err);
-  }
-
-  await db.update(merchants).set({
-    status: "cancelled",
-    updatedAt: new Date(),
-  }).where(eq(merchants.id, merchant.id));
-
-  await db.update(webhookEvents)
-    .set({ merchantId: merchant.id })
+  await db.update(merchants).set({ status: "cancelled", updatedAt: new Date() })
+    .where(eq(merchants.id, merchant.id));
+  await db.update(webhookEvents).set({ merchantId: merchant.id })
     .where(eq(webhookEvents.eventId, eventId));
 }
 
-async function handlePaymentFailed(event: Record<string, unknown>, eventId: string) {
-  const subscriptionId = (event.payload as Record<string, unknown>)?.subscriptionId as string ||
-    (event as Record<string, string>).subscriptionId;
+async function handlePaymentFailed(invoice: Record<string, unknown>, eventId: string) {
+  const subscriptionId = invoice.subscription as string;
 
-  if (!subscriptionId) {
-    console.error("[payment] No subscriptionId in failure event");
-    return;
-  }
+  if (!subscriptionId) return;
 
   const [merchant] = await db.select().from(merchants)
     .where(eq(merchants.subscriptionId, subscriptionId)).limit(1);
 
-  if (!merchant || !merchant.coolifyAppUuid) {
-    console.error("[payment] Merchant not found for subscription:", subscriptionId);
-    return;
+  if (!merchant || !merchant.coolifyAppUuid) return;
+
+  console.log(`[stripe] Suspending bot for ${merchant.businessName} (payment failed)`);
+
+  try { await stopApplication(merchant.coolifyAppUuid); } catch (err) {
+    console.error("[stripe] Failed to stop app:", err);
   }
 
-  console.log(`[payment] Suspending bot for ${merchant.businessName} (payment failed)`);
+  await db.update(merchants).set({ status: "suspended", updatedAt: new Date() })
+    .where(eq(merchants.id, merchant.id));
+  await db.update(webhookEvents).set({ merchantId: merchant.id })
+    .where(eq(webhookEvents.eventId, eventId));
+}
 
-  try {
-    await stopApplication(merchant.coolifyAppUuid);
-  } catch (err) {
-    console.error("[payment] Failed to stop app:", err);
+async function handleSubscriptionUpdated(subscription: Record<string, unknown>, eventId: string) {
+  const subscriptionId = subscription.id as string;
+  const status = subscription.status as string;
+
+  if (!subscriptionId) return;
+
+  const [merchant] = await db.select().from(merchants)
+    .where(eq(merchants.subscriptionId, subscriptionId)).limit(1);
+
+  if (!merchant) return;
+
+  // If subscription becomes active again (e.g. payment retry succeeded)
+  if (status === "active" && merchant.status === "suspended" && merchant.coolifyAppUuid) {
+    console.log(`[stripe] Reactivating bot for ${merchant.businessName}`);
+    try { await startApplication(merchant.coolifyAppUuid); } catch (err) {
+      console.error("[stripe] Failed to start app:", err);
+    }
+    await db.update(merchants).set({ status: "active", updatedAt: new Date() })
+      .where(eq(merchants.id, merchant.id));
   }
 
-  await db.update(merchants).set({
-    status: "suspended",
-    updatedAt: new Date(),
-  }).where(eq(merchants.id, merchant.id));
-
-  await db.update(webhookEvents)
-    .set({ merchantId: merchant.id })
+  await db.update(webhookEvents).set({ merchantId: merchant.id })
     .where(eq(webhookEvents.eventId, eventId));
 }

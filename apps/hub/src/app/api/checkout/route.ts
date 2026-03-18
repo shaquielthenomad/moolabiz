@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { getPlan } from "@/lib/plans";
+import { createCheckoutSession, getStripePriceId } from "@/lib/stripe";
 import type { CheckoutResponse } from "@/lib/types";
 
 const checkoutSchema = z.object({
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
     const existingSlug = await db.select().from(merchants).where(eq(merchants.slug, slug)).limit(1);
     if (existingSlug.length > 0) {
       return NextResponse.json(
-        { success: false, error: "A bot for a similar business name already exists. Try adding your area or a unique word." } satisfies CheckoutResponse,
+        { success: false, error: "A store with a similar name already exists. Try adding your area or a unique word." } satisfies CheckoutResponse,
         { status: 409 }
       );
     }
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
     const existingPhone = await db.select().from(merchants).where(eq(merchants.whatsappNumber, whatsappNumber)).limit(1);
     if (existingPhone.length > 0) {
       return NextResponse.json(
-        { success: false, error: "This WhatsApp number is already registered. Contact support if you need help." } satisfies CheckoutResponse,
+        { success: false, error: "This WhatsApp number is already registered. Log in to manage your store." } satisfies CheckoutResponse,
         { status: 409 }
       );
     }
@@ -116,60 +117,53 @@ export async function POST(request: Request) {
       whatsappAppSecret,
     }).returning();
 
-    const YOCO_SECRET_KEY = process.env.YOCO_SECRET_KEY;
-
-    if (!YOCO_SECRET_KEY) {
-      console.error("YOCO_SECRET_KEY is not set");
+    // Get Stripe price ID for this plan
+    const stripePriceId = getStripePriceId(planId);
+    if (!stripePriceId) {
+      await db.delete(merchants).where(eq(merchants.id, merchant.id));
       return NextResponse.json(
-        { success: false, error: "Payment system unavailable. Please try again later." } satisfies CheckoutResponse,
+        { success: false, error: "Payment configuration error. Please try again." } satisfies CheckoutResponse,
         { status: 500 }
       );
     }
 
-    // Create Yoco checkout session
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://moolabiz.shop";
-    const res = await fetch("https://payments.yoco.com/api/checkouts", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${YOCO_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        amount: plan.price,
-        currency: "ZAR",
+
+    try {
+      const session = await createCheckoutSession({
+        priceId: stripePriceId,
+        merchantId: merchant.id,
+        slug,
         successUrl: `${baseUrl}/setup-complete?slug=${slug}`,
         cancelUrl: `${baseUrl}/?cancelled=true`,
-        failureUrl: `${baseUrl}/?failed=true`,
-        metadata: {
-          merchantId: merchant.id,
-          slug,
-        },
-      }),
-    });
+      });
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.error(`Yoco checkout failed (${res.status}):`, errBody);
-      // Clean up the pending merchant
+      // Store Stripe checkout session ID
+      await db.update(merchants)
+        .set({ yocoCheckoutId: session.id, updatedAt: new Date() })
+        .where(eq(merchants.id, merchant.id));
+
+      if (!session.url) {
+        await db.delete(merchants).where(eq(merchants.id, merchant.id));
+        return NextResponse.json(
+          { success: false, error: "Checkout session created but no URL returned." } satisfies CheckoutResponse,
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        checkoutUrl: session.url,
+        checkoutId: session.id,
+      } satisfies CheckoutResponse);
+    } catch (err) {
+      console.error("Stripe checkout failed:", err);
       await db.delete(merchants).where(eq(merchants.id, merchant.id));
       return NextResponse.json(
         { success: false, error: "Could not create checkout. Please try again." } satisfies CheckoutResponse,
         { status: 500 }
       );
     }
-
-    const checkout = await res.json();
-
-    // Store checkout ID on merchant
-    await db.update(merchants)
-      .set({ yocoCheckoutId: checkout.id, updatedAt: new Date() })
-      .where(eq(merchants.id, merchant.id));
-
-    return NextResponse.json({
-      success: true,
-      checkoutUrl: checkout.redirectUrl,
-      checkoutId: checkout.id,
-    } satisfies CheckoutResponse);
   } catch (err) {
     console.error("Checkout error:", err);
     return NextResponse.json(

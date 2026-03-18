@@ -8,19 +8,22 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "MoolaBiz — Your Shop Never Sleeps. Even When You Do.",
+  title: "MoolaBiz — Your WhatsApp Store",
   description:
-    "Get your own AI-powered WhatsApp shop bot. No tech skills needed. Built for South African spaza shops, braiders, and food sellers. Live in 8 minutes.",
+    "Turn your WhatsApp into a 24/7 online store. Take orders, accept payments, and grow your business — no tech skills needed. Built for South African sellers.",
   openGraph: {
-    title: "MoolaBiz — Your Shop Never Sleeps",
+    title: "MoolaBiz — Your WhatsApp Store",
     description:
-      "Your shop takes orders, answers customers, and makes sales — 24/7 on WhatsApp. Built in Mzansi for SA traders.",
+      "Sell anything on WhatsApp. Cakes, clothing, sneakers, beauty products — MoolaBiz turns your WhatsApp number into a fully working online store. No tech skills needed.",
     type: "website",
     url: "https://moolabiz.shop",
     locale: "en_ZA",
   },
   twitter: {
     card: "summary_large_image",
+    title: "MoolaBiz — Your WhatsApp Store",
+    description:
+      "Turn your WhatsApp into a 24/7 online store. Built for South African sellers.",
   },
 };
 

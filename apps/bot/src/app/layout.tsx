@@ -10,8 +10,8 @@ const geistSans = Geist({
 const businessName = process.env.BUSINESS_NAME || "MoolaBiz Shop";
 
 export const metadata: Metadata = {
-  title: `${businessName} — Shop`,
-  description: `Browse and order from ${businessName}. Fast delivery, great prices.`,
+  title: `${businessName}`,
+  description: `Shop online at ${businessName}. Browse products and place your order.`,
 };
 
 export default function RootLayout({
