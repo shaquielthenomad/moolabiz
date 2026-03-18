@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
@@ -82,9 +83,8 @@ export async function POST(request: Request) {
         WHATSAPP_NUMBER: merchant.whatsappNumber,
         PAYMENT_PROVIDER: merchant.paymentProvider,
         PLAN: merchant.plan,
-        WHATSAPP_VERIFY_TOKEN: merchant.whatsappVerifyToken || "",
-        WHATSAPP_APP_SECRET: merchant.whatsappAppSecret || "",
-        OLLAMA_URL: "http://ollama:11434",
+        API_SECRET: crypto.randomBytes(32).toString("hex"),
+        DB_PATH: "/data/store.db",
       });
 
       // 3. Trigger deployment (async on Coolify side — keep status as "provisioning")

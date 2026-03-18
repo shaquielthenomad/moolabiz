@@ -142,9 +142,8 @@ async function handlePaymentSucceeded(event: Record<string, unknown>, eventId: s
       WHATSAPP_NUMBER: merchant.whatsappNumber,
       PAYMENT_PROVIDER: merchant.paymentProvider,
       PLAN: merchant.plan,
-      WHATSAPP_VERIFY_TOKEN: merchant.whatsappVerifyToken || "",
-      WHATSAPP_APP_SECRET: merchant.whatsappAppSecret || "",
-      OLLAMA_URL: "http://ollama:11434",
+      API_SECRET: crypto.randomBytes(32).toString("hex"),
+      DB_PATH: "/data/store.db",
     });
 
     // 3. Trigger deployment

@@ -1,6 +1,5 @@
-version: "3.8"
 services:
-  bot:
+  catalog:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.bot
@@ -10,63 +9,52 @@ services:
       - BUSINESS_NAME=${BUSINESS_NAME}
       - BUSINESS_SLUG=${BUSINESS_SLUG}
       - WHATSAPP_NUMBER=${WHATSAPP_NUMBER}
-      - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN}
-      - WHATSAPP_APP_SECRET=${WHATSAPP_APP_SECRET}
       - PAYMENT_PROVIDER=${PAYMENT_PROVIDER}
-      - OLLAMA_URL=http://ollama:11434
+      - API_SECRET=${API_SECRET}
+      - DB_PATH=/data/store.db
     volumes:
-      - ../workspace:/workspace:ro
+      - catalog_data:/data
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 512M
           cpus: "0.5"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/api/health || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-    depends_on:
-      ollama:
-        condition: service_healthy
-    networks:
-      - internal
     restart: unless-stopped
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
   ollama:
     image: ollama/ollama:0.6
     volumes:
       - ollama_data:/root/.ollama
-    command: sh -c "ollama serve & sleep 5 && (ollama list | grep -q llama3.2:3b || ollama pull llama3.2:3b) && wait"
     deploy:
       resources:
         limits:
-          memory: 6g
-          cpus: "2.0"
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - internal
+          memory: 3G
+          cpus: "1"
+    command: sh -c "ollama serve & sleep 5 && (ollama list | grep -q llama3.2:1b || ollama pull llama3.2:1b) && wait"
     restart: unless-stopped
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
-
-networks:
-  internal:
-    driver: bridge
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
 
 volumes:
+  catalog_data:
   ollama_data:
