@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     });
 
     // Dispatch by event type — cast to generic shape for handlers
-    const obj = event.data.object as Record<string, unknown>;
+    const obj = event.data.object as unknown as Record<string, unknown>;
     if (eventType === "checkout.session.completed") {
       await handleCheckoutCompleted(obj, eventId);
     } else if (eventType === "customer.subscription.deleted") {
