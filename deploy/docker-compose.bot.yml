@@ -1,0 +1,46 @@
+version: "3.8"
+services:
+  bot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.bot
+    ports:
+      - "3000:3000"
+    environment:
+      - BUSINESS_NAME=${BUSINESS_NAME}
+      - BUSINESS_SLUG=${BUSINESS_SLUG}
+      - WHATSAPP_NUMBER=${WHATSAPP_NUMBER}
+      - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN}
+      - WHATSAPP_APP_SECRET=${WHATSAPP_APP_SECRET}
+      - PAYMENT_PROVIDER=${PAYMENT_PROVIDER}
+      - OLLAMA_URL=http://ollama:11434
+    volumes:
+      - ../workspace:/workspace:ro
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:0.6
+    volumes:
+      - ollama_data:/root/.ollama
+    command: sh -c "ollama serve & sleep 5 && ollama pull llama3.2:3b && wait"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+    restart: unless-stopped
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
+
+volumes:
+  ollama_data:

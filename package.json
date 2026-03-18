@@ -1,0 +1,16 @@
+{
+  "name": "moolabiz",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zero-tech WhatsApp shop bot platform for African informal traders",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:hub": "cd apps/hub && npm run dev",
+    "dev:bot": "cd apps/bot && npm run dev",
+    "build:hub": "cd apps/hub && npm run build",
+    "build:bot": "cd apps/bot && npm run build",
+    "provision": "./scripts/provision.sh"
+  }
+}

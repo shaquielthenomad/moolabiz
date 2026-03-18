@@ -1,0 +1,20 @@
+version: "3.8"
+services:
+  hub:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.hub
+    ports:
+      - "3000:3000"
+    environment:
+      - COOLIFY_API_URL=${COOLIFY_API_URL}
+      - COOLIFY_API_TOKEN=${COOLIFY_API_TOKEN}
+      - COOLIFY_PROJECT_UUID=${COOLIFY_PROJECT_UUID}
+      - COOLIFY_SERVER_UUID=${COOLIFY_SERVER_UUID}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
