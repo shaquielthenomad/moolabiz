@@ -30,7 +30,7 @@ const RESERVED_SLUGS = [
 
 // Simple in-memory rate limiter: IP -> list of timestamps
 const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_MAX = 3;
+const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 function isRateLimited(ip: string): boolean {
