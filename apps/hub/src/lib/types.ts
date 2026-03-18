@@ -2,6 +2,7 @@ export interface SignupFormData {
   businessName: string;
   whatsappNumber: string;
   paymentProvider: "yoco" | "ozow" | "payfast";
+  pin: string;
 }
 
 export interface ProvisionResponse {

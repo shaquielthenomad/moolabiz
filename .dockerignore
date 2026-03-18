@@ -1,0 +1,44 @@
+# Dependencies — never bake local node_modules into the image
+node_modules/
+apps/*/node_modules/
+
+# Next.js build output — rebuilt inside Docker
+.next/
+apps/*/.next/
+out/
+apps/*/out/
+
+# Local environment files — secrets must come from runtime env, not the image
+.env
+.env.*
+apps/*/.env
+apps/*/.env.*
+
+# Git history — not needed in the image
+.git/
+.gitignore
+
+# Editor / OS noise
+.DS_Store
+*.log
+.turbo/
+.vscode/
+.idea/
+
+# Workspace SOUL files — mounted at runtime via a volume, not baked in
+workspace/
+
+# Test and CI artefacts
+coverage/
+.nyc_output/
+__tests__/
+*.test.ts
+*.spec.ts
+
+# TypeScript source maps (standalone bundle uses compiled JS)
+*.map
+
+# Readme / docs
+*.md
+!apps/bot/README.md
+!apps/hub/README.md

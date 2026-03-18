@@ -15,6 +15,10 @@ if (!verifyToken || verifyToken.length < 16) {
   console.error("[webhook] WHATSAPP_VERIFY_TOKEN is missing or too short (min 16 chars)");
 }
 
+// How long we're willing to wait for the full message-processing pipeline
+// before giving WhatsApp a 200 so they don't retry the same event.
+const PROCESSING_TIMEOUT_MS = 25_000;
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 
@@ -40,7 +44,8 @@ export async function POST(request: NextRequest) {
   const appSecret = process.env.WHATSAPP_APP_SECRET;
   if (!appSecret) {
     console.error("[webhook] WHATSAPP_APP_SECRET is not configured");
-    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+    // Return 200 so WhatsApp doesn't keep retrying a permanently broken endpoint
+    return NextResponse.json({ status: "received" }, { status: 200 });
   }
 
   const rawBody = await request.text();
@@ -65,29 +70,60 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = JSON.parse(rawBody);
+  let body: unknown;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    console.warn("[webhook] Failed to parse JSON body");
+    return NextResponse.json({ error: "Bad Request" }, { status: 400 });
+  }
 
   // Log only non-PII metadata
-  const firstEntry = body?.entry?.[0];
+  const firstEntry = (body as { entry?: { changes?: { value?: { messages?: { type?: string }[] } }[] }[] })
+    ?.entry?.[0];
   const messageType = firstEntry?.changes?.[0]?.value?.messages?.[0]?.type ?? "unknown";
   console.log("[webhook] Received message", { type: messageType, timestamp: Date.now() });
 
+  // getSoulPrompt never throws — it falls back to the default prompt if SOUL.md
+  // is missing or unreadable (handled inside soul.ts).
   const soulPrompt = await getSoulPrompt();
-  const entries = body?.entry || [];
-  for (const entry of entries) {
-    for (const change of entry?.changes || []) {
-      const messages = change?.value?.messages || [];
-      for (const msg of messages) {
-        if (msg.type === "text" && msg.text?.body) {
-          const response = await chat(soulPrompt, [
-            { role: "user", content: msg.text.body },
-          ]);
-          // TODO: Send response back via WhatsApp API
-          console.log(`[webhook] Response for ${msg.from}:`, response.substring(0, 100));
+
+  const entries = (body as { entry?: unknown[] })?.entry ?? [];
+
+  // Wrap message processing in a timeout so a slow/unresponsive Ollama instance
+  // can't block the WhatsApp acknowledgement indefinitely.
+  const processingTimeout = new Promise<void>((resolve) => {
+    setTimeout(() => {
+      console.warn("[webhook] Processing timeout reached, acknowledging anyway");
+      resolve();
+    }, PROCESSING_TIMEOUT_MS);
+  });
+
+  const processMessages = async () => {
+    for (const entry of entries as { changes?: unknown[] }[]) {
+      for (const change of (entry?.changes ?? []) as { value?: { messages?: unknown[] } }[]) {
+        const messages = change?.value?.messages ?? [];
+        for (const msg of messages as { type?: string; text?: { body?: string }; from?: string }[]) {
+          if (msg.type === "text" && msg.text?.body) {
+            try {
+              const response = await chat(soulPrompt, [
+                { role: "user", content: msg.text.body },
+              ]);
+              // TODO: Send response back via WhatsApp API
+              console.log(`[webhook] Response for ${msg.from}:`, response.substring(0, 100));
+            } catch (err) {
+              // Ollama may be starting up, overloaded, or temporarily down.
+              // Log the error but do NOT propagate — WhatsApp must always get
+              // a 200 or it will retry the same webhook event repeatedly.
+              console.error("[webhook] Ollama chat failed, skipping message:", err instanceof Error ? err.message : err);
+            }
+          }
         }
       }
     }
-  }
+  };
+
+  await Promise.race([processMessages(), processingTimeout]);
 
   return NextResponse.json({ status: "received" }, { status: 200 });
 }

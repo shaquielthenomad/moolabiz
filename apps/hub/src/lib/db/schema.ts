@@ -6,6 +6,7 @@ export const merchants = pgTable("merchants", {
   slug: text("slug").notNull().unique(),
   whatsappNumber: text("whatsapp_number").notNull().unique(),
   paymentProvider: text("payment_provider").notNull(),
+  pin: text("pin"),
   plan: text("plan").notNull().default("starter"),
   status: text("status").notNull().default("pending"),
   // pending -> provisioning -> active -> suspended -> cancelled

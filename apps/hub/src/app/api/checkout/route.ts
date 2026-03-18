@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { getPlan } from "@/lib/plans";
@@ -19,6 +20,7 @@ const checkoutSchema = z.object({
       "Enter a valid South African number like +27821234567"
     ),
   paymentProvider: z.enum(["yoco", "ozow", "payfast"]),
+  pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 digits"),
   plan: z.enum(["starter", "pro", "business"]),
 });
 
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { businessName, whatsappNumber, paymentProvider, plan: planId } = parsed.data;
+    const { businessName, whatsappNumber, paymentProvider, pin, plan: planId } = parsed.data;
     const plan = getPlan(planId);
 
     if (!plan) {
@@ -97,12 +99,16 @@ export async function POST(request: Request) {
     const whatsappVerifyToken = crypto.randomBytes(32).toString("hex");
     const whatsappAppSecret = crypto.randomBytes(32).toString("hex");
 
+    // Hash the PIN
+    const hashedPin = await bcrypt.hash(pin, 10);
+
     // Insert merchant as pending
     const [merchant] = await db.insert(merchants).values({
       businessName,
       slug,
       whatsappNumber,
       paymentProvider,
+      pin: hashedPin,
       plan: planId,
       status: "pending",
       subdomain: `${slug}.bot.moolabiz.shop`,

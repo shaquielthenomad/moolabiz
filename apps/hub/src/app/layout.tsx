@@ -8,13 +8,13 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "MoolaBiz — Free WhatsApp Shop Bot for South African Traders",
+  title: "MoolaBiz — Your Shop Never Sleeps. Even When You Do.",
   description:
-    "Get your own AI-powered WhatsApp shop bot for free. No tech skills needed. Built for South African traders. Start selling on WhatsApp in 8 minutes.",
+    "Get your own AI-powered WhatsApp shop bot. No tech skills needed. Built for South African spaza shops, braiders, and food sellers. Live in 8 minutes.",
   openGraph: {
-    title: "MoolaBiz — Free WhatsApp Shop Bot",
+    title: "MoolaBiz — Your Shop Never Sleeps",
     description:
-      "Your 24/7 WhatsApp Shop Bot — Free Forever. Built for South African traders.",
+      "Your shop takes orders, answers customers, and makes sales — 24/7 on WhatsApp. Built in Mzansi for SA traders.",
     type: "website",
     url: "https://moolabiz.shop",
     locale: "en_ZA",

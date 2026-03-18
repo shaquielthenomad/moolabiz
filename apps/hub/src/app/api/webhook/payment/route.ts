@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { merchants, webhookEvents } from "@/lib/db/schema";
 import {
@@ -20,22 +20,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Payload too large" }, { status: 413 });
     }
 
-    // Verify webhook signature
+    // Verify webhook signature — FAIL CLOSED
     const signature = request.headers.get("x-yoco-signature") || "";
     const webhookSecret = process.env.YOCO_WEBHOOK_SECRET;
 
-    if (webhookSecret && signature) {
-      const expected = crypto
-        .createHmac("sha256", webhookSecret)
-        .update(rawBody)
-        .digest("hex");
+    if (!webhookSecret) {
+      console.error("YOCO_WEBHOOK_SECRET is not configured — rejecting webhook");
+      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+    }
 
-      const sigBuf = Buffer.from(signature);
-      const expBuf = Buffer.from(expected);
-      if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-        console.error("Invalid Yoco webhook signature");
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    if (!signature) {
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
+
+    const expected = crypto
+      .createHmac("sha256", webhookSecret)
+      .update(rawBody)
+      .digest("hex");
+
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expected);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+      console.error("Invalid Yoco webhook signature");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const event = JSON.parse(rawBody);
@@ -103,10 +110,16 @@ async function handlePaymentSucceeded(event: Record<string, unknown>, eventId: s
     return;
   }
 
-  // Update status to provisioning
-  await db.update(merchants)
+  // Atomic status transition — prevents race with provision-after-payment
+  const updated = await db.update(merchants)
     .set({ status: "provisioning", updatedAt: new Date() })
-    .where(eq(merchants.id, merchantId));
+    .where(and(eq(merchants.id, merchantId), eq(merchants.status, "pending")))
+    .returning();
+
+  if (updated.length === 0) {
+    console.log("[payment] Merchant already claimed by another process:", merchantId);
+    return;
+  }
 
   // Link webhook event to merchant
   await db.update(webhookEvents)
