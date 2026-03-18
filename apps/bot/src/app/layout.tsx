@@ -11,7 +11,7 @@ const businessName = process.env.BUSINESS_NAME || "Shop";
 const slug = process.env.BUSINESS_SLUG || "";
 
 export const metadata: Metadata = {
-  title: `${businessName} — Shop Online`,
+  title: `${businessName} | MoolaBiz`,
   description: `Browse and order from ${businessName}. Fast, easy, powered by MoolaBiz.`,
   openGraph: {
     title: `${businessName} — Shop Online`,
@@ -31,7 +31,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="whatsapp" content={process.env.WHATSAPP_NUMBER || ""} />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230f172a'/><text x='16' y='22' text-anchor='middle' font-family='system-ui' font-weight='800' font-size='18' fill='%23f59e0b'>M</text></svg>" />
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💸</text></svg>" />
       </head>
       <body className={`${geistSans.variable} antialiased bg-white text-slate-900`}>
         {children}
