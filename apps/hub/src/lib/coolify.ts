@@ -43,7 +43,7 @@ export async function createApplication(
       name: `bot-${slug}`,
       description: `MoolaBiz bot for ${businessName}`,
       domains,
-      dockerfile: [
+      dockerfile: Buffer.from([
         "FROM node:22-alpine",
         "RUN apk add --no-cache python3 make g++ wget",
         "WORKDIR /app",
@@ -53,7 +53,7 @@ export async function createApplication(
         "EXPOSE 3000",
         "HEALTHCHECK CMD wget -q -O- http://localhost:3000/api/health || exit 1",
         'CMD ["npm", "start"]',
-      ].join("\n"),
+      ].join("\n")).toString("base64"),
       build_pack: "dockerfile",
       ports_exposes: "3000",
       instant_deploy: false,
