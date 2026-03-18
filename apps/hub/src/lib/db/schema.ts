@@ -7,7 +7,7 @@ export const merchants = pgTable("merchants", {
   whatsappNumber: text("whatsapp_number").notNull().unique(),
   paymentProvider: text("payment_provider").notNull(),
   pin: text("pin"),
-  plan: text("plan").notNull().default("starter"),
+  plan: text("plan").notNull().default("intro"),
   status: text("status").notNull().default("pending"),
   // pending -> provisioning -> active -> suspended -> cancelled
   coolifyAppUuid: text("coolify_app_uuid"),

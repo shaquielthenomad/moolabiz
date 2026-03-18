@@ -21,7 +21,7 @@ const checkoutSchema = z.object({
     ),
   paymentProvider: z.enum(["yoco", "ozow", "payfast"]),
   pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 digits"),
-  plan: z.enum(["starter", "pro", "business"]),
+  plan: z.enum(["intro", "growth", "pro", "business"]),
 });
 
 const RESERVED_SLUGS = [

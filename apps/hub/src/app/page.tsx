@@ -9,12 +9,13 @@ const PAYMENT_ERROR_PATTERN = /payment system unavailable|yoco|checkout/i;
 
 const PLANS = [
   {
-    id: "starter" as PlanType,
-    name: "Starter",
-    priceDisplay: "R99",
+    id: "intro" as PlanType,
+    name: "Intro",
+    priceDisplay: "R49.99",
     period: "/month",
     features: [
       "WhatsApp shop bot",
+      "Web catalog storefront",
       "Order taking & cart",
       "1 payment provider",
       "English + 1 language",
@@ -22,18 +23,31 @@ const PLANS = [
     ],
   },
   {
-    id: "pro" as PlanType,
-    name: "Pro",
-    priceDisplay: "R249",
+    id: "growth" as PlanType,
+    name: "Growth",
+    priceDisplay: "R149",
     period: "/month",
     popular: true,
     features: [
-      "Everything in Starter",
-      "All 5 languages",
+      "Everything in Intro",
+      "All 5 SA languages",
       "All payment providers",
       "Appointment booking",
       "Daily revenue reports",
-      "Priority WhatsApp support",
+      "WhatsApp support",
+    ],
+  },
+  {
+    id: "pro" as PlanType,
+    name: "Pro",
+    priceDisplay: "R299",
+    period: "/month",
+    features: [
+      "Everything in Growth",
+      "AI business advisor",
+      "Priority support",
+      "Custom bot personality",
+      "Advanced analytics",
     ],
   },
   {
@@ -43,11 +57,10 @@ const PLANS = [
     period: "/month",
     features: [
       "Everything in Pro",
-      "AI business advisor",
-      "Admin dashboard",
-      "Custom bot personality",
       "Dedicated support",
-      "Multiple numbers",
+      "Multiple WhatsApp numbers",
+      "Custom integrations",
+      "SLA guarantee",
     ],
   },
 ];
@@ -573,7 +586,7 @@ function PlanPicker({
             className={`relative flex flex-col rounded-2xl border-2 p-6 transition-all duration-200 hover:shadow-xl ${
               plan.popular
                 ? "bg-amber-900 border-amber-700 shadow-2xl text-white ring-4 ring-amber-400/30 md:-mt-3 md:-mb-3"
-                : plan.id === "starter"
+                : plan.id === "intro"
                 ? "bg-gradient-to-br from-white via-amber-50/60 to-amber-100/40 border-amber-200 shadow-md backdrop-blur-sm"
                 : "bg-gradient-to-br from-white via-slate-50/80 to-indigo-50/40 border-indigo-100 shadow-md backdrop-blur-sm"
             }`}

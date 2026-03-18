@@ -2,12 +2,13 @@ import type { Plan } from "./types";
 
 export const PLANS: Plan[] = [
   {
-    id: "starter",
-    name: "Starter",
-    price: 9900, // R99
-    priceDisplay: "R99",
+    id: "intro",
+    name: "Intro",
+    price: 4999, // R49.99
+    priceDisplay: "R49.99",
     features: [
       "WhatsApp shop bot",
+      "Web catalog storefront",
       "Order taking & cart",
       "1 payment provider",
       "English + 1 language",
@@ -15,18 +16,31 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    id: "pro",
-    name: "Pro",
-    price: 24900, // R249
-    priceDisplay: "R249",
+    id: "growth",
+    name: "Growth",
+    price: 14900, // R149
+    priceDisplay: "R149",
     popular: true,
     features: [
-      "Everything in Starter",
-      "All 5 languages",
+      "Everything in Intro",
+      "All 5 SA languages",
       "All payment providers",
       "Appointment booking",
       "Daily revenue reports",
-      "Priority WhatsApp support",
+      "WhatsApp support",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: 29900, // R299
+    priceDisplay: "R299",
+    features: [
+      "Everything in Growth",
+      "AI business advisor",
+      "Priority support",
+      "Custom bot personality",
+      "Advanced analytics",
     ],
   },
   {
@@ -36,11 +50,10 @@ export const PLANS: Plan[] = [
     priceDisplay: "R499",
     features: [
       "Everything in Pro",
-      "Devil's Advocate AI advisor",
-      "Admin dashboard",
-      "Custom bot personality",
       "Dedicated support",
       "Multiple WhatsApp numbers",
+      "Custom integrations",
+      "SLA guarantee",
     ],
   },
 ];

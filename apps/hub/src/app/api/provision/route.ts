@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     }
 
     const { businessName, whatsappNumber, paymentProvider } = parsed.data;
-    const plan = (body.plan as string) || "starter";
+    const plan = (body.plan as string) || "intro";
     const slug = slugify(businessName);
 
     if (!slug || slug.length < 3 || !/[a-z0-9]/.test(slug)) {
