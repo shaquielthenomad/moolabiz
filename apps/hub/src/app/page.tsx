@@ -189,9 +189,8 @@ export default function Home() {
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <section className="bg-white px-6 pt-20 pb-24 text-center">
         <div className="max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-full mb-8 tracking-wide">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" aria-hidden="true" />
-            Built for South African sellers
+          <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-8 tracking-wide border border-amber-200">
+            Howzit! Built for South African sellers
           </div>
 
           <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 leading-tight tracking-tight">

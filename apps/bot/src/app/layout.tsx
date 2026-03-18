@@ -7,11 +7,19 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const businessName = process.env.BUSINESS_NAME || "MoolaBiz Shop";
+const businessName = process.env.BUSINESS_NAME || "Shop";
+const slug = process.env.BUSINESS_SLUG || "";
 
 export const metadata: Metadata = {
-  title: `${businessName}`,
-  description: `Shop online at ${businessName}. Browse products and place your order.`,
+  title: `${businessName} — Shop Online`,
+  description: `Browse and order from ${businessName}. Fast, easy, powered by MoolaBiz.`,
+  openGraph: {
+    title: `${businessName} — Shop Online`,
+    description: `Browse products and place your order from ${businessName}.`,
+    type: "website",
+    url: slug ? `https://${slug}.bot.moolabiz.shop` : undefined,
+    siteName: businessName,
+  },
 };
 
 export default function RootLayout({
@@ -23,8 +31,9 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="whatsapp" content={process.env.WHATSAPP_NUMBER || ""} />
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230f172a'/><text x='16' y='22' text-anchor='middle' font-family='system-ui' font-weight='800' font-size='18' fill='%23f59e0b'>M</text></svg>" />
       </head>
-      <body className={`${geistSans.variable} antialiased bg-background text-foreground`}>
+      <body className={`${geistSans.variable} antialiased bg-white text-slate-900`}>
         {children}
       </body>
     </html>
