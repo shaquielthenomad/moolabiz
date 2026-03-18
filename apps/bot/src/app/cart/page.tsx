@@ -129,11 +129,11 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-32">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-gradient-to-r from-amber-600 to-yellow-500 px-4 py-4 shadow-md">
         <div className="mx-auto flex max-w-xl items-center gap-3">
-          <Link href="/" className="text-white text-2xl">
+          <Link href="/" className="text-white text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center">
             ←
           </Link>
           <h1 className="text-lg font-bold text-white">Your Cart</h1>
@@ -152,10 +152,10 @@ export default function CartPage() {
                 <img
                   src={item.product.image_url}
                   alt={item.product.name}
-                  className="h-16 w-16 rounded-lg object-cover"
+                  className="h-16 w-16 rounded-lg object-cover shrink-0"
                 />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-amber-50 text-2xl">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-2xl">
                   📦
                 </div>
               )}
@@ -163,21 +163,26 @@ export default function CartPage() {
                 <p className="text-sm font-semibold text-neutral-800 truncate">
                   {item.product.name}
                 </p>
-                <p className="text-base font-bold text-amber-700">
-                  {formatPrice(item.product.price)}
+                {/* Per-unit price */}
+                <p className="text-xs text-neutral-400">{formatPrice(item.product.price)} each</p>
+                {/* Line total */}
+                <p className="text-base font-extrabold text-emerald-600">
+                  {formatPrice(item.product.price * item.quantity)}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => updateQuantity(item.product.id, -1)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-lg font-bold text-neutral-600 active:bg-neutral-200"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-lg font-bold text-neutral-600 active:bg-neutral-200 transition-colors"
+                  aria-label={`Remove one ${item.product.name}`}
                 >
                   −
                 </button>
-                <span className="w-6 text-center font-bold">{item.quantity}</span>
+                <span className="w-6 text-center font-bold text-base">{item.quantity}</span>
                 <button
                   onClick={() => updateQuantity(item.product.id, 1)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-700 active:bg-emerald-200"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-700 active:bg-emerald-200 transition-colors"
+                  aria-label={`Add one ${item.product.name}`}
                 >
                   +
                 </button>
@@ -186,7 +191,7 @@ export default function CartPage() {
           ))}
         </div>
 
-        {/* Total */}
+        {/* Total (inline summary — visible while scrolling form) */}
         <div className="mt-5 flex items-center justify-between rounded-xl bg-amber-50 px-4 py-3 border border-amber-200">
           <span className="text-sm font-semibold text-neutral-600">Order Total</span>
           <span className="text-2xl font-bold text-amber-700">{formatPrice(total)}</span>
@@ -202,39 +207,62 @@ export default function CartPage() {
             placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3.5 text-base outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 min-h-[50px]"
           />
           <input
             type="tel"
             placeholder="Phone number (e.g. 072 123 4567)"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-base outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3.5 text-base outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 min-h-[50px]"
           />
         </div>
 
         {error && (
-          <div className="mt-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600 border border-red-200">
+          <div className="mt-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 border border-red-200">
             {error}
           </div>
         )}
 
-        {/* Checkout button */}
+        {/* Inline checkout button (kept for non-sticky contexts / accessibility) */}
         <button
           onClick={handleCheckout}
           disabled={submitting}
-          className="mt-6 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-4 text-lg font-bold text-white shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
+          className="mt-6 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-4 text-lg font-bold text-white shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 min-h-[56px]"
         >
           {submitting ? "Placing order..." : `Pay ${formatPrice(total)}`}
         </button>
 
         <Link
           href="/"
-          className="mt-4 block text-center text-sm font-medium text-amber-600 hover:text-amber-700"
+          className="mt-4 block text-center text-sm font-medium text-amber-600 hover:text-amber-700 py-2"
         >
           ← Back to shop
         </Link>
       </main>
+
+      {/* ── Sticky order summary bar ─────────────────────────────────────── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-amber-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-4 py-3">
+        <div className="mx-auto max-w-xl flex items-center gap-3">
+          {/* Mini total */}
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 leading-none mb-0.5">
+              Order Total
+            </p>
+            <p className="text-xl font-extrabold text-amber-700 leading-none">
+              {formatPrice(total)}
+            </p>
+          </div>
+          {/* Pay Now button */}
+          <button
+            onClick={handleCheckout}
+            disabled={submitting}
+            className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-3.5 text-base font-extrabold text-white shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 min-h-[50px] min-w-[120px]"
+          >
+            {submitting ? "Placing..." : `Pay Now →`}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

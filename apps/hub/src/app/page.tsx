@@ -3,7 +3,9 @@
 import { useState, type FormEvent } from "react";
 import type { SignupFormData, CheckoutResponse, PlanType } from "@/lib/types";
 
-type Stage = "form" | "plans" | "processing" | "error";
+type Stage = "form" | "plans" | "processing" | "error" | "waitlist";
+
+const PAYMENT_ERROR_PATTERN = /payment system unavailable|yoco|checkout/i;
 
 const PLANS = [
   {
@@ -104,7 +106,13 @@ export default function Home() {
       const data: CheckoutResponse = await res.json();
 
       if (!res.ok || !data.success || !data.checkoutUrl) {
-        setError(data.error || "Could not start checkout. Please try again.");
+        const errMsg = data.error || "Could not start checkout. Please try again.";
+        // If the payment system isn't configured, show a friendly waitlist instead
+        if (PAYMENT_ERROR_PATTERN.test(errMsg) || res.status === 503) {
+          setStage("waitlist");
+          return;
+        }
+        setError(errMsg);
         setStage("plans");
         return;
       }
@@ -160,7 +168,7 @@ export default function Home() {
 
         <a
           href="#signup"
-          className="relative mt-6 inline-block bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-lg px-10 py-4 rounded-2xl shadow-xl transition-colors"
+          className="relative mt-6 inline-block bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-lg px-10 py-4 rounded-2xl shadow-xl transition-colors animate-cta-bounce"
         >
           Start Free Trial &rarr;
         </a>
@@ -200,6 +208,61 @@ export default function Home() {
             <p className="text-xs sm:text-sm text-gray-600 mt-1 leading-snug">{v.sub}</p>
           </div>
         ))}
+      </section>
+
+      {/* ── How It Works ────────────────────────────────────────────────── */}
+      <section className="bg-white border-y border-amber-100 py-12 px-4">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-center text-xs font-bold tracking-widest uppercase text-amber-700 mb-1">
+            Simple as 1, 2, 3
+          </p>
+          <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-amber-900 mb-8">
+            How It Works
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 relative">
+            {/* Connector line — desktop only */}
+            <div className="hidden sm:block absolute top-10 left-[calc(16.67%+1rem)] right-[calc(16.67%+1rem)] h-0.5 bg-amber-200 z-0" aria-hidden="true" />
+            {[
+              {
+                step: "1",
+                icon: "✍️",
+                title: "Sign Up",
+                detail: "Enter your business name and WhatsApp number. Takes 2 minutes, no tech skills needed.",
+              },
+              {
+                step: "2",
+                icon: "🤖",
+                title: "We Set Up Your Bot",
+                detail: "We deploy your personal WhatsApp shop bot. You'll get a link and setup instructions on WhatsApp.",
+              },
+              {
+                step: "3",
+                icon: "💬",
+                title: "Customers Order on WhatsApp",
+                detail: "Share your bot link. Customers browse, add to cart, and pay — all in WhatsApp, 24/7.",
+              },
+            ].map((item) => (
+              <div key={item.step} className="relative z-10 flex flex-col items-center text-center px-4 py-4">
+                <div className="w-20 h-20 rounded-full bg-amber-50 border-4 border-amber-200 flex items-center justify-center shadow-md mb-4">
+                  <span className="text-3xl" aria-hidden="true">{item.icon}</span>
+                </div>
+                <div className="w-7 h-7 rounded-full bg-amber-500 text-white text-sm font-extrabold flex items-center justify-center -mt-2 mb-3 shadow">
+                  {item.step}
+                </div>
+                <h3 className="font-extrabold text-amber-900 text-base mb-1">{item.title}</h3>
+                <p className="text-sm text-gray-600 leading-snug max-w-[200px]">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <a
+              href="#signup"
+              className="inline-block bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-base px-8 py-3.5 rounded-2xl shadow-lg transition-colors"
+            >
+              Get Started &rarr;
+            </a>
+          </div>
+        </div>
       </section>
 
       {/* ── Testimonials ────────────────────────────────────────────────── */}
@@ -273,6 +336,13 @@ export default function Home() {
             </button>
           </div>
         )}
+        {stage === "waitlist" && (
+          <PaymentWaitlist
+            whatsappNumber={formData.whatsappNumber}
+            businessName={formData.businessName}
+            onBack={() => { setStage("plans"); setError(""); }}
+          />
+        )}
       </section>
 
       {/* ── Trust Signals ───────────────────────────────────────────────── */}
@@ -305,7 +375,7 @@ export default function Home() {
           <div className="pt-4">
             <a
               href="#signup"
-              className="inline-block bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white font-extrabold text-lg px-10 py-4 rounded-2xl shadow-xl transition-colors"
+              className="inline-block bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white font-extrabold text-lg px-10 py-4 rounded-2xl shadow-xl transition-colors animate-cta-bounce"
             >
               Get My Shop Bot &rarr;
             </a>
@@ -500,10 +570,12 @@ function PlanPicker({
         {PLANS.map((plan) => (
           <div
             key={plan.id}
-            className={`relative flex flex-col rounded-2xl border-2 p-6 transition-shadow ${
+            className={`relative flex flex-col rounded-2xl border-2 p-6 transition-all duration-200 hover:shadow-xl ${
               plan.popular
                 ? "bg-amber-900 border-amber-700 shadow-2xl text-white ring-4 ring-amber-400/30 md:-mt-3 md:-mb-3"
-                : "bg-white border-gray-200 shadow-md"
+                : plan.id === "starter"
+                ? "bg-gradient-to-br from-white via-amber-50/60 to-amber-100/40 border-amber-200 shadow-md backdrop-blur-sm"
+                : "bg-gradient-to-br from-white via-slate-50/80 to-indigo-50/40 border-indigo-100 shadow-md backdrop-blur-sm"
             }`}
           >
             {/* Trial badge — all plans */}
@@ -624,6 +696,110 @@ function PlanPicker({
         >
           &larr; Back
         </button>
+      </div>
+    </div>
+  );
+}
+
+function PaymentWaitlist({
+  whatsappNumber,
+  businessName,
+  onBack,
+}: {
+  whatsappNumber: string;
+  businessName: string;
+  onBack: () => void;
+}) {
+  const [waitlistNumber, setWaitlistNumber] = useState(whatsappNumber || "+27");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleWaitlistSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      // Best-effort — fire and forget; even if it fails the user sees success
+      await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ whatsappNumber: waitlistNumber, businessName }),
+      });
+    } catch {
+      /* silent — we still confirm to the user */
+    }
+    setSubmitting(false);
+    setSubmitted(true);
+  }
+
+  return (
+    <div className="max-w-md mx-auto">
+      <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-6 sm:p-8 space-y-5">
+        {/* Icon + heading */}
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto text-3xl">
+            🛠️
+          </div>
+          <h2 className="text-xl font-extrabold text-amber-900">
+            Payments coming soon
+          </h2>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            We&apos;re still setting up our payment system. Leave your WhatsApp
+            number and we&apos;ll message you the moment it&apos;s ready —
+            usually within a day.
+          </p>
+        </div>
+
+        {submitted ? (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-4 text-center space-y-2">
+            <p className="text-2xl">✅</p>
+            <p className="text-emerald-800 font-bold text-sm">
+              You&apos;re on the list!
+            </p>
+            <p className="text-emerald-700 text-xs">
+              We&apos;ll WhatsApp you at{" "}
+              <span className="font-semibold">{waitlistNumber}</span> as soon
+              as payments are live.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleWaitlistSubmit} className="space-y-4">
+            <label className="block">
+              <span className="text-sm font-semibold text-gray-700">
+                Your WhatsApp number
+              </span>
+              <input
+                type="tel"
+                required
+                pattern="\+27\d{9}"
+                title="Enter your number like +27821234567"
+                placeholder="+27821234567"
+                value={waitlistNumber}
+                onChange={(e) => {
+                  let val = e.target.value.replace(/[\s\-()]/g, "");
+                  if (!val.startsWith("+27")) val = "+27";
+                  setWaitlistNumber(val);
+                }}
+                className="mt-1.5 block w-full rounded-xl border border-gray-300 px-4 py-3.5 text-gray-900 placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold text-base py-4 rounded-2xl shadow-lg transition-colors disabled:opacity-50"
+            >
+              {submitting ? "Saving..." : "Notify me on WhatsApp 📲"}
+            </button>
+          </form>
+        )}
+
+        <div className="text-center">
+          <button
+            onClick={onBack}
+            className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            &larr; Back to plans
+          </button>
+        </div>
       </div>
     </div>
   );

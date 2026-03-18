@@ -120,10 +120,26 @@ export default function CatalogPage() {
             <p className="text-sm text-neutral-500">Loading products...</p>
           </div>
         ) : products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-            <p className="text-4xl">🛍️</p>
-            <p className="text-lg font-semibold text-neutral-600">No products yet</p>
-            <p className="text-sm text-neutral-400">Check back soon — new items are being added!</p>
+          <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-6">
+            <div className="w-24 h-24 rounded-full bg-amber-50 border-4 border-amber-200 flex items-center justify-center shadow-inner">
+              <span className="text-4xl" aria-hidden="true">🛍️</span>
+            </div>
+            <div className="space-y-1">
+              <p className="text-lg font-extrabold text-neutral-700">Products coming soon!</p>
+              <p className="text-sm text-neutral-500 leading-relaxed max-w-xs mx-auto">
+                Our menu is being updated. In the meantime, message us directly on WhatsApp to place an order.
+              </p>
+            </div>
+            {whatsappNumber && (
+              <a
+                href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Hi! I'd like to place an order.")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 flex items-center gap-2 rounded-2xl bg-emerald-500 px-7 py-4 text-base font-bold text-white shadow-lg hover:bg-emerald-600 active:scale-95 transition-all"
+              >
+                <span aria-hidden="true">💬</span> Message us on WhatsApp
+              </a>
+            )}
           </div>
         ) : (
           Object.entries(categories).map(([category, items]) => (
@@ -137,19 +153,19 @@ export default function CatalogPage() {
                 {items.map((product) => (
                   <div
                     key={product.id}
-                    className="overflow-hidden rounded-xl border border-amber-100 bg-white shadow-sm transition-shadow hover:shadow-md"
+                    className="group overflow-hidden rounded-xl border border-amber-100 bg-white shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]"
                   >
                     {product.image_url ? (
                       <div className="aspect-square w-full overflow-hidden bg-neutral-100">
                         <img
                           src={product.image_url}
                           alt={product.name}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           loading="lazy"
                         />
                       </div>
                     ) : (
-                      <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100 text-4xl">
+                      <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100 text-4xl transition-transform duration-300 group-hover:scale-110">
                         📦
                       </div>
                     )}
@@ -162,12 +178,13 @@ export default function CatalogPage() {
                           {product.description}
                         </p>
                       )}
-                      <p className="mt-2 text-lg font-bold text-amber-700">
+                      {/* Price — prominent, green, Rand-first */}
+                      <p className="mt-2 text-xl font-extrabold text-emerald-600 leading-none">
                         {formatPrice(product.price)}
                       </p>
                       <button
                         onClick={() => addToCart(product)}
-                        className="mt-2 w-full rounded-lg bg-emerald-500 py-2.5 text-sm font-bold text-white shadow-sm active:scale-95 transition-transform hover:bg-emerald-600"
+                        className="mt-3 w-full rounded-xl bg-emerald-500 py-3 text-sm font-extrabold text-white shadow-sm active:scale-95 transition-all hover:bg-emerald-600 hover:shadow-md min-h-[44px]"
                       >
                         Add to Cart
                       </button>

@@ -115,6 +115,23 @@ export default function LoginPage() {
             {loading ? "Logging in..." : "Log in to your shop"}
           </button>
 
+          {/* Forgot PIN */}
+          <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-center">
+            <p className="text-sm font-semibold text-amber-900 mb-0.5">Forgot your PIN?</p>
+            <p className="text-xs text-amber-700 leading-snug">
+              WhatsApp us at{" "}
+              <a
+                href="https://wa.me/27600000000?text=Hi%2C%20I%20forgot%20my%20MoolaBiz%20PIN%20and%20need%20help%20resetting%20it."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold underline hover:text-amber-900 transition-colors"
+              >
+                +27 60 000 0000
+              </a>{" "}
+              and we&apos;ll help you reset it — usually within a few minutes.
+            </p>
+          </div>
+
           <p className="text-center text-sm text-gray-500">
             Don&apos;t have a shop bot yet?{" "}
             <a href="/#signup" className="text-emerald-600 font-semibold hover:underline">

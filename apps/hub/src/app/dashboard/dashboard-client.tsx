@@ -16,20 +16,56 @@ interface MerchantData {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    active: "bg-emerald-100 text-emerald-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    provisioning: "bg-blue-100 text-blue-800",
-    suspended: "bg-orange-100 text-orange-800",
-    cancelled: "bg-red-100 text-red-800",
+  if (status === "active") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+        {/* Pulsing green dot */}
+        <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden="true">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+        </span>
+        Active
+      </span>
+    );
+  }
+
+  if (status === "suspended") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-amber-100 text-amber-800 border border-amber-200">
+        {/* Warning icon */}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0 text-amber-600" aria-hidden="true">
+          <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+        </svg>
+        Suspended
+      </span>
+    );
+  }
+
+  if (status === "cancelled") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-red-100 text-red-800 border border-red-200">
+        {/* X icon */}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0 text-red-600" aria-hidden="true">
+          <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+        </svg>
+        Cancelled
+      </span>
+    );
+  }
+
+  // Fallback for pending, provisioning, etc.
+  const fallbackColors: Record<string, string> = {
+    pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    provisioning: "bg-blue-100 text-blue-800 border-blue-200",
   };
 
   return (
     <span
-      className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
-        colors[status] || "bg-gray-100 text-gray-800"
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border ${
+        fallbackColors[status] || "bg-gray-100 text-gray-800 border-gray-200"
       }`}
     >
+      <span className="w-2 h-2 rounded-full bg-current opacity-60 shrink-0" aria-hidden="true" />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
