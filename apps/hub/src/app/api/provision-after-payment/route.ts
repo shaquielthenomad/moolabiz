@@ -18,7 +18,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing slug" }, { status: 400 });
     }
 
-    // Find the merchant
     const [merchant] = await db
       .select()
       .from(merchants)
@@ -29,12 +28,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Merchant not found" }, { status: 404 });
     }
 
-    // Must have a yocoCheckoutId (proves they went through checkout)
     if (!merchant.yocoCheckoutId) {
       return NextResponse.json({ error: "No payment found" }, { status: 403 });
     }
 
-    // Already provisioned or in progress
     if (merchant.status === "active") {
       return NextResponse.json({
         success: true,
@@ -51,8 +48,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Atomic status transition: only proceed if status is still "pending"
-    // This prevents the race condition between webhook and client-side provisioning
+    // Atomic status transition
     const updated = await db
       .update(merchants)
       .set({ status: "provisioning", updatedAt: new Date() })
@@ -60,7 +56,6 @@ export async function POST(request: Request) {
       .returning();
 
     if (updated.length === 0) {
-      // Another process already claimed this — return current state
       return NextResponse.json({
         success: true,
         subdomain: merchant.subdomain,
@@ -74,10 +69,16 @@ export async function POST(request: Request) {
     console.log(`[provision] Provisioning bot for ${merchant.businessName} (${slug})`);
 
     try {
-      // 1. Create application on Coolify
+      // 1. Create catalog app on Coolify
       const app = await createApplication(slug, merchant.businessName, domains);
 
-      // 2. Set environment variables
+      // 2. Save app UUID immediately (so we can retry deploy without duplicate)
+      await db
+        .update(merchants)
+        .set({ coolifyAppUuid: app.uuid, updatedAt: new Date() })
+        .where(eq(merchants.id, merchant.id));
+
+      // 3. Set environment variables
       await setEnvironmentVariables(app.uuid, {
         BUSINESS_NAME: merchant.businessName,
         BUSINESS_SLUG: slug,
@@ -86,12 +87,14 @@ export async function POST(request: Request) {
         PLAN: merchant.plan,
         API_SECRET: crypto.randomBytes(32).toString("hex"),
         DB_PATH: "/data/store.db",
+        NIXPACKS_NODE_VERSION: "22",
       });
 
-      // 3. Trigger deployment (async on Coolify side — keep status as "provisioning")
+      // 4. Trigger catalog deployment
       await deployApplication(app.uuid);
+      console.log(`[provision] Catalog deploying: ${subdomain} (${app.uuid})`);
 
-      // 4. Deploy OpenClaw WhatsApp bot container
+      // 5. Deploy OpenClaw WhatsApp bot
       let openclawContainerId: string | null = null;
       try {
         const ocResult = await deployOpenClaw({
@@ -103,22 +106,14 @@ export async function POST(request: Request) {
         openclawContainerId = ocResult.containerId;
         console.log(`[provision] OpenClaw deployed: ${openclawContainerId}`);
       } catch (ocErr) {
-        // Non-fatal — catalog still works without WhatsApp bot
-        console.error("[provision] OpenClaw deploy failed (non-fatal):", ocErr);
+        console.error("[provision] OpenClaw failed (non-fatal):", ocErr);
       }
 
-      // 5. Store Coolify UUID and OpenClaw container ID
-      // Status stays "provisioning" until Coolify confirms healthy
+      // 6. Update merchant with OpenClaw info
       await db
         .update(merchants)
-        .set({
-          coolifyAppUuid: app.uuid,
-          openclawContainerId,
-          updatedAt: new Date(),
-        })
+        .set({ openclawContainerId, updatedAt: new Date() })
         .where(eq(merchants.id, merchant.id));
-
-      console.log(`[provision] Bot deploying: ${subdomain} (app: ${app.uuid})`);
 
       return NextResponse.json({
         success: true,
@@ -126,13 +121,14 @@ export async function POST(request: Request) {
         status: "provisioning",
       });
     } catch (err) {
-      // Rollback status on failure
       console.error("[provision] Error:", err);
-      await db
-        .update(merchants)
-        .set({ status: "pending", updatedAt: new Date() })
-        .where(eq(merchants.id, merchant.id));
-
+      // Only rollback to pending if we don't have an app UUID yet
+      if (!merchant.coolifyAppUuid) {
+        await db
+          .update(merchants)
+          .set({ status: "pending", updatedAt: new Date() })
+          .where(eq(merchants.id, merchant.id));
+      }
       return NextResponse.json(
         { error: "Provisioning failed. Please refresh the page to retry." },
         { status: 500 }

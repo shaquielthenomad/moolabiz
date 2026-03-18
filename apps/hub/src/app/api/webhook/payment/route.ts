@@ -127,6 +127,12 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
   try {
     const app = await createApplication(merchant.slug, merchant.businessName, domains);
 
+    // Save app UUID immediately so retries don't create duplicates
+    await db.update(merchants).set({
+      coolifyAppUuid: app.uuid,
+      updatedAt: new Date(),
+    }).where(eq(merchants.id, merchantId));
+
     await setEnvironmentVariables(app.uuid, {
       BUSINESS_NAME: merchant.businessName,
       BUSINESS_SLUG: merchant.slug,
@@ -135,11 +141,13 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
       PLAN: merchant.plan,
       API_SECRET: crypto.randomBytes(32).toString("hex"),
       DB_PATH: "/data/store.db",
+      NIXPACKS_NODE_VERSION: "22",
     });
 
     await deployApplication(app.uuid);
+    console.log(`[stripe] Catalog deploying: ${subdomain} (${app.uuid})`);
 
-    // Deploy OpenClaw WhatsApp bot container
+    // Deploy OpenClaw WhatsApp bot
     let openclawContainerId: string | null = null;
     try {
       const ocResult = await deployOpenClaw({
@@ -151,11 +159,10 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
       openclawContainerId = ocResult.containerId;
       console.log(`[stripe] OpenClaw deployed: ${openclawContainerId}`);
     } catch (ocErr) {
-      console.error("[stripe] OpenClaw deploy failed (non-fatal):", ocErr);
+      console.error("[stripe] OpenClaw failed (non-fatal):", ocErr);
     }
 
     await db.update(merchants).set({
-      coolifyAppUuid: app.uuid,
       openclawContainerId,
       updatedAt: new Date(),
     }).where(eq(merchants.id, merchantId));
