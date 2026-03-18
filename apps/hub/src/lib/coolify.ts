@@ -91,10 +91,11 @@ export async function setEnvironmentVariables(
 export async function deployApplication(appUuid: string): Promise<void> {
   const cfg = getConfig();
   const res = await fetch(
-    `${cfg.apiUrl}/api/v1/applications/${appUuid}/deploy`,
+    `${cfg.apiUrl}/api/v1/deploy`,
     {
       method: "POST",
       headers: headers(cfg.apiToken),
+      body: JSON.stringify({ uuid: appUuid }),
     }
   );
 
