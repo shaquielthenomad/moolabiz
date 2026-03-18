@@ -71,7 +71,7 @@ async function handleDeploy(req, res) {
     /* ignore */
   }
 
-  // 3. Deploy new container
+  // 3. Deploy new container (internal only — no Traefik labels)
   const cmd = [
     "docker run -d",
     `--name openclaw-${s}`,
@@ -82,13 +82,6 @@ async function handleDeploy(req, res) {
     `-v ${configDir}:/root/.openclaw-${s}`,
     `-e NODE_OPTIONS="--max-old-space-size=1536"`,
     `-e OPENCLAW_CONFIG_PATH=/root/.openclaw-${s}/config.json`,
-    '-l "traefik.enable=true"',
-    `-l "traefik.http.routers.oc-${s}.rule=Host(\`${s}.bot.moolabiz.shop\`) && PathPrefix(\`/onboard\`)"`,
-    `-l "traefik.http.routers.oc-${s}.entrypoints=https"`,
-    `-l "traefik.http.routers.oc-${s}.tls.certresolver=letsencrypt"`,
-    `-l "traefik.http.routers.oc-${s}.tls=true"`,
-    `-l "traefik.http.services.oc-${s}.loadbalancer.server.port=18789"`,
-    `-l "traefik.http.routers.oc-${s}.priority=100"`,
     "moolabiz/openclaw:latest",
     `--profile ${s} gateway --port 18789 --bind lan --allow-unconfigured`,
   ].join(" ");
