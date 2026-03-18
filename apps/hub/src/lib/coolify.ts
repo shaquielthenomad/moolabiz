@@ -83,7 +83,6 @@ export async function setEnvironmentVariables(
         body: JSON.stringify({
           key,
           value,
-          is_build_time: false,
           is_preview: false,
         }),
       }
