@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
-
-const API_SECRET = process.env.API_SECRET || "";
-
-function isAuthorized(request: NextRequest): boolean {
-  const auth = request.headers.get("authorization") || "";
-  return API_SECRET.length > 0 && auth === `Bearer ${API_SECRET}`;
-}
+import { isAuthorized } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   if (!isAuthorized(request)) {
@@ -29,6 +23,9 @@ interface Product {
   in_stock: number;
 }
 
+const MAX_ITEMS_PER_ORDER = 50;
+const MAX_ITEM_QUANTITY = 100;
+
 export async function POST(request: NextRequest) {
   let body: {
     customer_name?: string;
@@ -49,26 +46,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "items array is required" }, { status: 400 });
   }
 
-  if (items.length > 50) {
-    return NextResponse.json({ error: "Maximum 50 items per order" }, { status: 400 });
+  if (items.length > MAX_ITEMS_PER_ORDER) {
+    return NextResponse.json({ error: `Maximum ${MAX_ITEMS_PER_ORDER} items per order` }, { status: 400 });
   }
 
-  // Resolve products and compute total
+  // Validate all items cheaply before any DB queries
+  for (const item of items) {
+    if (!item.productId || !item.quantity || item.quantity < 1 || item.quantity > MAX_ITEM_QUANTITY) {
+      return NextResponse.json(
+        { error: "Each item needs productId and quantity between 1-100" },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Batch-fetch all products in one query (fixes N+1)
+  const productIds = items.map((i) => i.productId);
+  const placeholders = productIds.map(() => "?").join(",");
+  const products = db
+    .prepare(`SELECT * FROM products WHERE id IN (${placeholders}) AND in_stock = 1`)
+    .all(...productIds) as Product[];
+  const productMap = new Map(products.map((p) => [p.id, p]));
+
   const resolvedItems: { productId: number; name: string; price: number; quantity: number }[] = [];
   let total = 0;
 
   for (const item of items) {
-    if (!item.productId || !item.quantity || item.quantity < 1 || item.quantity > 100) {
-      return NextResponse.json(
-        { error: "Each item needs productId and quantity >= 1" },
-        { status: 400 }
-      );
-    }
-
-    const product = db.prepare("SELECT * FROM products WHERE id = ? AND in_stock = 1").get(
-      item.productId
-    ) as Product | undefined;
-
+    const product = productMap.get(item.productId);
     if (!product) {
       return NextResponse.json(
         { error: `Product ${item.productId} not found or out of stock` },
@@ -86,6 +90,10 @@ export async function POST(request: NextRequest) {
     total += product.price * item.quantity;
   }
 
+  if (total > 10_000_000) {
+    return NextResponse.json({ error: "Order total exceeds maximum" }, { status: 400 });
+  }
+
   const result = db.prepare(
     `INSERT INTO orders (customer_name, customer_phone, items, total, payment_provider)
      VALUES (?, ?, ?, ?, ?)`
@@ -99,22 +107,13 @@ export async function POST(request: NextRequest) {
 
   const orderId = result.lastInsertRowid;
 
-  // Create settings table if needed, get merchant's payment key
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at TEXT DEFAULT (datetime('now'))
-    );
-  `);
-
+  // Get merchant's payment key (settings table created at init in db.ts)
   const merchantPaymentKey = db.prepare(
     "SELECT value FROM settings WHERE key = 'yoco_secret_key'"
   ).get() as { value: string } | undefined;
 
   let paymentUrl = `/order/${orderId}`;
 
-  // If merchant has their own Yoco key, create a checkout for the customer
   if (merchantPaymentKey?.value && total >= 200) {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
@@ -139,24 +138,16 @@ export async function POST(request: NextRequest) {
       if (yocoRes.ok) {
         const checkout = await yocoRes.json();
         paymentUrl = checkout.redirectUrl;
-
-        // Store payment ID on the order
         db.prepare("UPDATE orders SET payment_id = ? WHERE id = ?")
           .run(checkout.id, orderId);
       }
     } catch (err) {
       console.error("[orders] Yoco checkout failed:", err);
-      // Fall back to order confirmation page
     }
   }
 
   return NextResponse.json(
-    {
-      orderId,
-      total,
-      items: resolvedItems,
-      paymentUrl,
-    },
+    { orderId, total, items: resolvedItems, paymentUrl },
     { status: 201 }
   );
 }

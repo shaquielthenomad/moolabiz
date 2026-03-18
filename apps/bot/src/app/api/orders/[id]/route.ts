@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
-
-const API_SECRET = process.env.API_SECRET || "";
-
-function isAuthorized(request: NextRequest): boolean {
-  const auth = request.headers.get("authorization") || "";
-  return API_SECRET.length > 0 && auth === `Bearer ${API_SECRET}`;
-}
+import { isAuthorized } from "@/lib/auth";
 
 interface Order {
   id: number;
@@ -22,7 +16,7 @@ interface Order {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -32,8 +26,7 @@ export async function GET(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  // Only return PII (name, phone) to authenticated callers
-  const authed = isAuthorized(_request);
+  const authed = isAuthorized(request);
   return NextResponse.json({
     order: {
       id: order.id,
@@ -55,10 +48,6 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(Number(id));
-  if (!order) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
-  }
 
   let body: Record<string, unknown>;
   try {
@@ -72,7 +61,7 @@ export async function PATCH(
   const values: unknown[] = [];
 
   for (const key of allowed) {
-    if (key in body) {
+    if (key in body && typeof body[key] === "string") {
       sets.push(`${key} = ?`);
       values.push(body[key]);
     }
@@ -85,9 +74,14 @@ export async function PATCH(
   sets.push("updated_at = datetime('now')");
   values.push(Number(id));
 
-  db.prepare(`UPDATE orders SET ${sets.join(", ")} WHERE id = ?`).run(...values);
+  const updated = db.prepare(
+    `UPDATE orders SET ${sets.join(", ")} WHERE id = ? RETURNING *`
+  ).get(...values) as Order | undefined;
 
-  const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(Number(id)) as Order;
+  if (!updated) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
   return NextResponse.json({
     order: {
       ...updated,

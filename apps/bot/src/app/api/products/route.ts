@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
-
-const API_SECRET = process.env.API_SECRET || "";
-
-function isAuthorized(request: NextRequest): boolean {
-  const auth = request.headers.get("authorization") || "";
-  return API_SECRET.length > 0 && auth === `Bearer ${API_SECRET}`;
-}
+import { isAuthorized } from "@/lib/auth";
 
 export async function GET() {
   const products = db.prepare(

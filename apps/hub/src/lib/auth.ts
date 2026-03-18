@@ -4,8 +4,8 @@ import { cookies } from "next/headers";
 const COOKIE_NAME = "moolabiz_session";
 
 function getSecret(): string {
-  const s = process.env.SESSION_SECRET || process.env.ADMIN_SECRET;
-  if (!s) throw new Error("SESSION_SECRET or ADMIN_SECRET required");
+  const s = process.env.SESSION_SECRET;
+  if (!s) throw new Error("SESSION_SECRET env var is required");
   return s;
 }
 
@@ -28,13 +28,14 @@ export function verifySessionToken(
   try {
     const [encoded, sig] = token.split(".");
     if (!encoded || !sig) return null;
-    const expected = crypto
+    const expectedBuf = crypto
       .createHmac("sha256", getSecret())
       .update(encoded)
-      .digest("base64url");
+      .digest();
+    const sigBuf = Buffer.from(sig, "base64url");
     if (
-      sig.length !== expected.length ||
-      !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+      sigBuf.length !== expectedBuf.length ||
+      !crypto.timingSafeEqual(sigBuf, expectedBuf)
     )
       return null;
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString());
