@@ -33,7 +33,7 @@ export async function createApplication(
   domains: string
 ): Promise<CoolifyApplication> {
   const cfg = getConfig();
-  const res = await fetch(`${cfg.apiUrl}/api/v1/applications/dockerfile`, {
+  const res = await fetch(`${cfg.apiUrl}/api/v1/applications/public`, {
     method: "POST",
     headers: headers(cfg.apiToken),
     body: JSON.stringify({
@@ -43,18 +43,10 @@ export async function createApplication(
       name: `bot-${slug}`,
       description: `MoolaBiz bot for ${businessName}`,
       domains,
-      dockerfile: Buffer.from([
-        "FROM node:22-alpine",
-        "RUN apk add --no-cache python3 make g++ wget",
-        "WORKDIR /app",
-        "COPY . .",
-        "RUN npm ci --production",
-        "RUN mkdir -p /data",
-        "EXPOSE 3000",
-        "HEALTHCHECK CMD wget -q -O- http://localhost:3000/api/health || exit 1",
-        'CMD ["npm", "start"]',
-      ].join("\n")).toString("base64"),
-      build_pack: "dockerfile",
+      git_repository: "https://github.com/shaquielthenomad/moolabiz",
+      git_branch: "main",
+      build_pack: "nixpacks",
+      base_directory: "/apps/bot",
       ports_exposes: "3000",
       instant_deploy: false,
     }),
