@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { SignupFormData, CheckoutResponse, PlanType } from "@/lib/types";
+import type { SignupFormData, CheckoutResponse, PlanType, SupportedCurrency } from "@/lib/types";
 
 type Stage = "form" | "plans" | "processing" | "error" | "waitlist";
+
+const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string; flag: string }[] = [
+  { value: "zar", label: "ZAR (R)", flag: "🇿🇦" },
+  { value: "usd", label: "USD ($)", flag: "🇺🇸" },
+  { value: "thb", label: "THB (฿)", flag: "🇹🇭" },
+];
 
 const PAYMENT_ERROR_PATTERN = /payment system unavailable|yoco|checkout/i;
 
@@ -11,7 +17,7 @@ const PLANS = [
   {
     id: "intro" as PlanType,
     name: "Intro",
-    priceDisplay: "R49.99",
+    priceDisplays: { zar: "R49.99", usd: "$2.99", thb: "฿99" } as Record<SupportedCurrency, string>,
     period: "/month",
     features: [
       "WhatsApp shop bot",
@@ -25,7 +31,7 @@ const PLANS = [
   {
     id: "growth" as PlanType,
     name: "Growth",
-    priceDisplay: "R149",
+    priceDisplays: { zar: "R149", usd: "$8.99", thb: "฿299" } as Record<SupportedCurrency, string>,
     period: "/month",
     popular: true,
     features: [
@@ -40,7 +46,7 @@ const PLANS = [
   {
     id: "pro" as PlanType,
     name: "Pro",
-    priceDisplay: "R299",
+    priceDisplays: { zar: "R299", usd: "$16.99", thb: "฿579" } as Record<SupportedCurrency, string>,
     period: "/month",
     features: [
       "Everything in Growth",
@@ -53,7 +59,7 @@ const PLANS = [
   {
     id: "business" as PlanType,
     name: "Business",
-    priceDisplay: "R499",
+    priceDisplays: { zar: "R499", usd: "$27.99", thb: "฿949" } as Record<SupportedCurrency, string>,
     period: "/month",
     features: [
       "Everything in Pro",
@@ -126,6 +132,7 @@ const FAQS = [
 export default function Home() {
   const [stage, setStage] = useState<Stage>("form");
   const [error, setError] = useState("");
+  const [currency, setCurrency] = useState<SupportedCurrency>("zar");
   const [formData, setFormData] = useState<SignupFormData>({
     businessName: "",
     email: "",
@@ -142,7 +149,7 @@ export default function Home() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, plan: planId }),
+        body: JSON.stringify({ ...formData, plan: planId, currency }),
       });
 
       const data: CheckoutResponse = await res.json();
@@ -450,6 +457,25 @@ export default function Home() {
             <p className="mt-3 text-slate-500">
               Pay monthly, cancel anytime. No contracts.
             </p>
+
+            {/* Currency selector */}
+            <div className="mt-5 flex items-center justify-center gap-2" role="group" aria-label="Select currency">
+              {CURRENCY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setCurrency(opt.value)}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    currency === opt.value
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
+                  }`}
+                  aria-pressed={currency === opt.value}
+                >
+                  <span aria-hidden="true">{opt.flag}</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Sign-up flow */}
@@ -465,6 +491,7 @@ export default function Home() {
               <PlanPicker
                 error={error}
                 loading={stage === "processing"}
+                currency={currency}
                 onSelect={handleSelectPlan}
                 onBack={() => { setStage("form"); setError(""); }}
               />
@@ -731,11 +758,13 @@ function SignupForm({
 function PlanPicker({
   error,
   loading,
+  currency,
   onSelect,
   onBack,
 }: {
   error: string;
   loading: boolean;
+  currency: SupportedCurrency;
   onSelect: (plan: PlanType) => void;
   onBack: () => void;
 }) {
@@ -777,7 +806,7 @@ function PlanPicker({
 
             <div className="mt-3 flex items-end gap-1">
               <span className="text-3xl font-bold text-slate-900 leading-none">
-                {plan.priceDisplay}
+                {plan.priceDisplays[currency]}
               </span>
               <span className="text-slate-400 text-sm pb-0.5">/month</span>
             </div>

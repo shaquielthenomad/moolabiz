@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { getPlan } from "@/lib/plans";
 import { createCheckoutSession, getStripePriceId } from "@/lib/stripe";
-import type { CheckoutResponse } from "@/lib/types";
+import type { CheckoutResponse, SupportedCurrency } from "@/lib/types";
 import { sendWelcomeEmail } from "@/lib/email";
 
 const checkoutSchema = z.object({
@@ -25,6 +25,7 @@ const checkoutSchema = z.object({
   paymentProvider: z.enum(["yoco", "ozow", "payfast"]),
   pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 digits"),
   plan: z.enum(["intro", "growth", "pro", "business"]),
+  currency: z.enum(["zar", "usd", "thb"]).optional().default("zar"),
 });
 
 const RESERVED_SLUGS = [
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { businessName, email, whatsappNumber, paymentProvider, pin, plan: planId } = parsed.data;
+    const { businessName, email, whatsappNumber, paymentProvider, pin, plan: planId, currency } = parsed.data;
     const plan = getPlan(planId);
 
     if (!plan) {
@@ -120,8 +121,8 @@ export async function POST(request: Request) {
       whatsappAppSecret,
     }).returning();
 
-    // Get Stripe price ID for this plan
-    const stripePriceId = getStripePriceId(planId);
+    // Get Stripe price ID for this plan and currency
+    const stripePriceId = getStripePriceId(planId, currency as SupportedCurrency);
     if (!stripePriceId) {
       await db.delete(merchants).where(eq(merchants.id, merchant.id));
       return NextResponse.json(

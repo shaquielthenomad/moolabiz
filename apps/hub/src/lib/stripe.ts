@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import type { SupportedCurrency } from "./types";
 
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -6,16 +7,35 @@ function getStripe(): Stripe {
   return new Stripe(key);
 }
 
-// Map plan IDs to Stripe price IDs
-const STRIPE_PRICES: Record<string, string> = {
-  intro: process.env.STRIPE_PRICE_INTRO || "price_1TCNCkLjaM3mxti1g2BLXMjQ",
-  growth: process.env.STRIPE_PRICE_GROWTH || "price_1TCND3LjaM3mxti1qJIVl4oe",
-  pro: process.env.STRIPE_PRICE_PRO || "price_1TCND5LjaM3mxti1e5oDqmHs",
-  business: process.env.STRIPE_PRICE_BUSINESS || "price_1TCND6LjaM3mxti1YbrHm1Nd",
+// Map plan IDs + currency to Stripe price IDs
+const STRIPE_PRICES: Record<string, Record<SupportedCurrency, string>> = {
+  intro: {
+    zar: process.env.STRIPE_PRICE_INTRO_ZAR || "price_1TCNCkLjaM3mxti1g2BLXMjQ",
+    usd: process.env.STRIPE_PRICE_INTRO_USD || "price_1TCTVHLjaM3mxti1EyLX3NUO",
+    thb: process.env.STRIPE_PRICE_INTRO_THB || "price_1TCTVKLjaM3mxti17ldJZBXR",
+  },
+  growth: {
+    zar: process.env.STRIPE_PRICE_GROWTH_ZAR || "price_1TCND3LjaM3mxti1qJIVl4oe",
+    usd: process.env.STRIPE_PRICE_GROWTH_USD || "price_1TCTVcLjaM3mxti1my4RKXMa",
+    thb: process.env.STRIPE_PRICE_GROWTH_THB || "price_1TCTVeLjaM3mxti1cPhTJnbE",
+  },
+  pro: {
+    zar: process.env.STRIPE_PRICE_PRO_ZAR || "price_1TCND5LjaM3mxti1e5oDqmHs",
+    usd: process.env.STRIPE_PRICE_PRO_USD || "price_1TCTVjLjaM3mxti1WVCb5hUV",
+    thb: process.env.STRIPE_PRICE_PRO_THB || "price_1TCTVkLjaM3mxti1rsaCbVvN",
+  },
+  business: {
+    zar: process.env.STRIPE_PRICE_BUSINESS_ZAR || "price_1TCND6LjaM3mxti1YbrHm1Nd",
+    usd: process.env.STRIPE_PRICE_BUSINESS_USD || "price_1TCTVoLjaM3mxti1RDcI8x9W",
+    thb: process.env.STRIPE_PRICE_BUSINESS_THB || "price_1TCTVqLjaM3mxti1vTr5s9gw",
+  },
 };
 
-export function getStripePriceId(planId: string): string | undefined {
-  return STRIPE_PRICES[planId];
+export function getStripePriceId(
+  planId: string,
+  currency: SupportedCurrency = "zar"
+): string | undefined {
+  return STRIPE_PRICES[planId]?.[currency];
 }
 
 export async function createCheckoutSession(opts: {

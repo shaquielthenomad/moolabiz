@@ -29,13 +29,17 @@ export interface CoolifyApplication {
 
 export type PlanType = "intro" | "growth" | "pro" | "business";
 
+export type SupportedCurrency = "zar" | "usd" | "thb";
+
 export type MerchantStatus = "pending" | "provisioning" | "active" | "suspended" | "cancelled";
 
 export interface Plan {
   id: PlanType;
   name: string;
-  price: number; // in ZAR cents
-  priceDisplay: string;
+  price: number; // in ZAR cents (legacy, kept for compatibility)
+  priceDisplay: string; // legacy ZAR display
+  prices: Record<SupportedCurrency, number>; // smallest unit per currency
+  priceDisplays: Record<SupportedCurrency, string>;
   features: string[];
   popular?: boolean;
 }
