@@ -80,6 +80,12 @@ export async function setEnvironmentVariables(
       }
     );
 
+    if (res.status === 409) {
+      // Already exists — skip (Coolify may auto-set some vars)
+      console.log(`Coolify setEnv "${key}" already exists, skipping`);
+      continue;
+    }
+
     if (!res.ok) {
       const body = await res.text();
       console.error(`Coolify setEnv "${key}" failed (${res.status}):`, body);

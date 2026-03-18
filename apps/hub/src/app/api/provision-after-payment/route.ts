@@ -68,18 +68,23 @@ export async function POST(request: Request) {
 
     console.log(`[provision] Provisioning bot for ${merchant.businessName} (${slug})`);
 
+    // Re-read merchant to get latest state (may have been updated by webhook)
+    const [freshMerchant] = await db.select().from(merchants).where(eq(merchants.id, merchant.id)).limit(1);
+
     try {
-      // 1. Create catalog app on Coolify
-      const app = await createApplication(slug, merchant.businessName, domains);
+      // 1. Create catalog app on Coolify (skip if already exists from previous attempt)
+      let appUuid = freshMerchant?.coolifyAppUuid;
+      if (!appUuid) {
+        const app = await createApplication(slug, merchant.businessName, domains);
+        appUuid = app.uuid;
+        await db
+          .update(merchants)
+          .set({ coolifyAppUuid: appUuid, updatedAt: new Date() })
+          .where(eq(merchants.id, merchant.id));
+      }
 
-      // 2. Save app UUID immediately (so we can retry deploy without duplicate)
-      await db
-        .update(merchants)
-        .set({ coolifyAppUuid: app.uuid, updatedAt: new Date() })
-        .where(eq(merchants.id, merchant.id));
-
-      // 3. Set environment variables
-      await setEnvironmentVariables(app.uuid, {
+      // 2. Set environment variables
+      await setEnvironmentVariables(appUuid, {
         BUSINESS_NAME: merchant.businessName,
         BUSINESS_SLUG: slug,
         WHATSAPP_NUMBER: merchant.whatsappNumber,
@@ -87,12 +92,11 @@ export async function POST(request: Request) {
         PLAN: merchant.plan,
         API_SECRET: crypto.randomBytes(32).toString("hex"),
         DB_PATH: "/data/store.db",
-        NIXPACKS_NODE_VERSION: "22",
       });
 
-      // 4. Trigger catalog deployment
-      await deployApplication(app.uuid);
-      console.log(`[provision] Catalog deploying: ${subdomain} (${app.uuid})`);
+      // 3. Trigger catalog deployment
+      await deployApplication(appUuid);
+      console.log(`[provision] Catalog deploying: ${subdomain} (${appUuid})`);
 
       // 5. Deploy OpenClaw WhatsApp bot
       let openclawContainerId: string | null = null;

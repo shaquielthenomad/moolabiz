@@ -141,7 +141,6 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
       PLAN: merchant.plan,
       API_SECRET: crypto.randomBytes(32).toString("hex"),
       DB_PATH: "/data/store.db",
-      NIXPACKS_NODE_VERSION: "22",
     });
 
     await deployApplication(app.uuid);
