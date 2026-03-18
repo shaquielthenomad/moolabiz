@@ -49,12 +49,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "items array is required" }, { status: 400 });
   }
 
+  if (items.length > 50) {
+    return NextResponse.json({ error: "Maximum 50 items per order" }, { status: 400 });
+  }
+
   // Resolve products and compute total
   const resolvedItems: { productId: number; name: string; price: number; quantity: number }[] = [];
   let total = 0;
 
   for (const item of items) {
-    if (!item.productId || !item.quantity || item.quantity < 1) {
+    if (!item.productId || !item.quantity || item.quantity < 1 || item.quantity > 100) {
       return NextResponse.json(
         { error: "Each item needs productId and quantity >= 1" },
         { status: 400 }

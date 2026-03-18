@@ -32,10 +32,16 @@ export async function GET(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
+  // Only return PII (name, phone) to authenticated callers
+  const authed = isAuthorized(_request);
   return NextResponse.json({
     order: {
-      ...order,
+      id: order.id,
       items: JSON.parse(order.items),
+      total: order.total,
+      status: order.status,
+      created_at: order.created_at,
+      ...(authed ? { customer_name: order.customer_name, customer_phone: order.customer_phone, payment_id: order.payment_id } : {}),
     },
   });
 }

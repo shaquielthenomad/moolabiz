@@ -17,7 +17,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allMerchants = await db.select().from(merchants);
+  const allMerchants = await db.select({
+    id: merchants.id,
+    businessName: merchants.businessName,
+    slug: merchants.slug,
+    whatsappNumber: merchants.whatsappNumber,
+    paymentProvider: merchants.paymentProvider,
+    plan: merchants.plan,
+    status: merchants.status,
+    coolifyAppUuid: merchants.coolifyAppUuid,
+    subdomain: merchants.subdomain,
+    createdAt: merchants.createdAt,
+    updatedAt: merchants.updatedAt,
+  }).from(merchants);
   return NextResponse.json({ merchants: allMerchants });
 }
 
