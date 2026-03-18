@@ -11,6 +11,7 @@ import {
   stopApplication,
   startApplication,
 } from "@/lib/coolify";
+import { deployOpenClaw, stopOpenClaw, startOpenClaw } from "@/lib/openclaw";
 
 export async function POST(request: Request) {
   try {
@@ -138,8 +139,24 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
 
     await deployApplication(app.uuid);
 
+    // Deploy OpenClaw WhatsApp bot container
+    let openclawContainerId: string | null = null;
+    try {
+      const ocResult = await deployOpenClaw({
+        slug: merchant.slug,
+        businessName: merchant.businessName,
+        ownerPhone: merchant.whatsappNumber,
+        paymentProvider: merchant.paymentProvider,
+      });
+      openclawContainerId = ocResult.containerId;
+      console.log(`[stripe] OpenClaw deployed: ${openclawContainerId}`);
+    } catch (ocErr) {
+      console.error("[stripe] OpenClaw deploy failed (non-fatal):", ocErr);
+    }
+
     await db.update(merchants).set({
       coolifyAppUuid: app.uuid,
+      openclawContainerId,
       updatedAt: new Date(),
     }).where(eq(merchants.id, merchantId));
 
@@ -169,6 +186,11 @@ async function handleSubscriptionCancelled(subscription: Record<string, unknown>
     console.error("[stripe] Failed to stop app:", err);
   }
 
+  // Also stop OpenClaw container
+  try { await stopOpenClaw(merchant.slug); } catch (err) {
+    console.error("[stripe] Failed to stop OpenClaw:", err);
+  }
+
   await db.update(merchants).set({ status: "cancelled", updatedAt: new Date() })
     .where(eq(merchants.id, merchant.id));
   await db.update(webhookEvents).set({ merchantId: merchant.id })
@@ -189,6 +211,11 @@ async function handlePaymentFailed(invoice: Record<string, unknown>, eventId: st
 
   try { await stopApplication(merchant.coolifyAppUuid); } catch (err) {
     console.error("[stripe] Failed to stop app:", err);
+  }
+
+  // Also stop OpenClaw container
+  try { await stopOpenClaw(merchant.slug); } catch (err) {
+    console.error("[stripe] Failed to stop OpenClaw:", err);
   }
 
   await db.update(merchants).set({ status: "suspended", updatedAt: new Date() })
@@ -213,6 +240,10 @@ async function handleSubscriptionUpdated(subscription: Record<string, unknown>, 
     console.log(`[stripe] Reactivating bot for ${merchant.businessName}`);
     try { await startApplication(merchant.coolifyAppUuid); } catch (err) {
       console.error("[stripe] Failed to start app:", err);
+    }
+    // Also restart OpenClaw container
+    try { await startOpenClaw(merchant.slug); } catch (err) {
+      console.error("[stripe] Failed to start OpenClaw:", err);
     }
     await db.update(merchants).set({ status: "active", updatedAt: new Date() })
       .where(eq(merchants.id, merchant.id));

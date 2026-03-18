@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { startApplication } from "@/lib/coolify";
+import { startOpenClaw } from "@/lib/openclaw";
 
 export async function POST() {
   try {
@@ -31,6 +32,11 @@ export async function POST() {
 
     if (merchant.coolifyAppUuid) {
       await startApplication(merchant.coolifyAppUuid);
+    }
+
+    // Also restart OpenClaw container
+    try { await startOpenClaw(merchant.slug); } catch (e) {
+      console.error("Failed to start OpenClaw:", e);
     }
 
     await db

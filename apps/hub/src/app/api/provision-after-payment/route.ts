@@ -8,6 +8,7 @@ import {
   setEnvironmentVariables,
   deployApplication,
 } from "@/lib/coolify";
+import { deployOpenClaw } from "@/lib/openclaw";
 
 export async function POST(request: Request) {
   try {
@@ -90,12 +91,29 @@ export async function POST(request: Request) {
       // 3. Trigger deployment (async on Coolify side — keep status as "provisioning")
       await deployApplication(app.uuid);
 
-      // 4. Store Coolify UUID — keep status as "provisioning" (not "active")
-      // Status transitions to "active" only when Coolify confirms healthy
+      // 4. Deploy OpenClaw WhatsApp bot container
+      let openclawContainerId: string | null = null;
+      try {
+        const ocResult = await deployOpenClaw({
+          slug,
+          businessName: merchant.businessName,
+          ownerPhone: merchant.whatsappNumber,
+          paymentProvider: merchant.paymentProvider,
+        });
+        openclawContainerId = ocResult.containerId;
+        console.log(`[provision] OpenClaw deployed: ${openclawContainerId}`);
+      } catch (ocErr) {
+        // Non-fatal — catalog still works without WhatsApp bot
+        console.error("[provision] OpenClaw deploy failed (non-fatal):", ocErr);
+      }
+
+      // 5. Store Coolify UUID and OpenClaw container ID
+      // Status stays "provisioning" until Coolify confirms healthy
       await db
         .update(merchants)
         .set({
           coolifyAppUuid: app.uuid,
+          openclawContainerId,
           updatedAt: new Date(),
         })
         .where(eq(merchants.id, merchant.id));

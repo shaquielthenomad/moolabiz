@@ -30,6 +30,7 @@ export default async function DashboardPage() {
     <DashboardClient
       merchant={{
         id: merchant.id,
+        slug: merchant.slug,
         businessName: merchant.businessName,
         whatsappNumber: merchant.whatsappNumber,
         paymentProvider: merchant.paymentProvider,
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
         planPrice: plan?.priceDisplay || "---",
         status: merchant.status,
         subdomain: merchant.subdomain,
+        openclawContainerId: merchant.openclawContainerId,
         createdAt: merchant.createdAt.toISOString(),
       }}
     />

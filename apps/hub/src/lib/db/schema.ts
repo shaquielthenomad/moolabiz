@@ -11,6 +11,7 @@ export const merchants = pgTable("merchants", {
   status: text("status").notNull().default("pending"),
   // pending -> provisioning -> active -> suspended -> cancelled
   coolifyAppUuid: text("coolify_app_uuid"),
+  openclawContainerId: text("openclaw_container_id"),
   subdomain: text("subdomain"),
   yocoCheckoutId: text("yoco_checkout_id"),
   subscriptionId: text("subscription_id"),
