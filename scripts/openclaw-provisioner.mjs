@@ -177,44 +177,31 @@ async function handleQR(req, res) {
     }
   } catch { /* not connected */ }
 
-  // Run channels login and capture the QR ASCII output
-  // The command blocks waiting for scan, so we use a short timeout
+  // Run channels login with a timeout — it blocks waiting for scan
+  // We capture the QR from stdout before killing the process
   try {
-    const { execFile } = await import("node:child_process");
-    const qrPromise = new Promise((resolve, reject) => {
-      const proc = execFile(
-        "docker",
-        ["exec", `openclaw-${s}`, "openclaw", "--profile", s, "channels", "login", "--channel", "whatsapp"],
-        { timeout: 12000 },
-        (err, stdout, stderr) => {
-          // Will always "fail" due to timeout since it waits for scan
-          resolve(stdout + stderr);
-        }
-      );
-      // Collect output as it comes
-      let output = "";
-      proc.stdout?.on("data", (d) => { output += d; });
-      proc.stderr?.on("data", (d) => { output += d; });
-      setTimeout(() => {
-        try { proc.kill(); } catch {}
-        resolve(output);
-      }, 10000);
-    });
+    let output = "";
+    try {
+      output = execSync(
+        `docker exec openclaw-${s} openclaw --profile ${s} channels login --channel whatsapp 2>&1`,
+        { timeout: 12000 }
+      ).toString();
+    } catch (err) {
+      // execSync throws on timeout or non-zero exit — capture output from all possible locations
+      output = err.stdout?.toString() || err.output?.[1]?.toString() || err.stderr?.toString() || err.message || "";
+      console.log(`[provisioner] QR capture: got ${output.length} chars from error output`);
+    }
 
-    const output = await qrPromise;
-
-    // Extract the QR block (ASCII art between the ▄ characters)
+    // Extract QR lines (ASCII art with block characters)
     const qrLines = output.split("\n").filter(
       (line) => line.includes("▄") || line.includes("█") || line.includes("▀")
     );
 
     if (qrLines.length > 5) {
-      // Convert ASCII QR to a renderable format
       const qrAscii = qrLines.join("\n");
       return json(res, 200, { connected: false, qr: qrAscii, type: "ascii" });
     }
 
-    // No QR yet — gateway might still be starting
     return json(res, 200, { connected: false, qr: null, message: "QR not ready yet" });
   } catch (err) {
     console.error(`[provisioner] QR fetch failed for ${s}:`, err.message);
