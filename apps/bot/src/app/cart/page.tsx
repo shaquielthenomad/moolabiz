@@ -143,7 +143,13 @@ export default function CartPage() {
 
       localStorage.removeItem("moolabiz-cart");
       setCart([]);
-      router.push(`/order/${data.orderId}`);
+
+      // If payment URL is returned (merchant has Yoco key), redirect to pay
+      if (data.paymentUrl && data.paymentUrl.startsWith("http")) {
+        window.location.href = data.paymentUrl;
+      } else {
+        router.push(`/order/${data.orderId}`);
+      }
     } catch {
       setError("Network error. Please try again.");
       setSubmitting(false);

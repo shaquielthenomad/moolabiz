@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         subdomain,
-        status: "provisioning",
+        status: "success",
       });
     } catch (err) {
       console.error("[provision] Error:", err);

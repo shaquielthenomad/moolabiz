@@ -19,8 +19,8 @@ const checkoutSchema = z.object({
   whatsappNumber: z
     .string()
     .regex(
-      /^\+27\d{9}$/,
-      "Enter a valid South African number like +27821234567"
+      /^\+\d{7,15}$/,
+      "Enter a valid phone number with country code (e.g. +27821234567)"
     ),
   paymentProvider: z.enum(["yoco", "ozow", "payfast"]),
   pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 digits"),

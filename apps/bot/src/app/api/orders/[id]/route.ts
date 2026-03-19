@@ -34,7 +34,8 @@ export async function GET(
       total: order.total,
       status: order.status,
       created_at: order.created_at,
-      ...(authed ? { customer_name: order.customer_name, customer_phone: order.customer_phone, payment_id: order.payment_id } : {}),
+      customer_name: order.customer_name || "Customer",
+      ...(authed ? { customer_phone: order.customer_phone, payment_id: order.payment_id } : {}),
     },
   });
 }

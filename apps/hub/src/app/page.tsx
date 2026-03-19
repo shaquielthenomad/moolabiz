@@ -684,7 +684,7 @@ function SignupForm({
           value={formData.whatsappNumber}
           onChange={(e) => {
             let val = e.target.value.replace(/[\s\-()]/g, "");
-            if (!val.startsWith("+27")) val = "+27";
+            if (!val.startsWith("+")) val = "+" + val;
             setFormData({ ...formData, whatsappNumber: val });
           }}
           className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base transition-colors"
