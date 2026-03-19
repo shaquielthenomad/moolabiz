@@ -72,6 +72,13 @@ async function handleDeploy(req, res) {
           model: "ollama/llama3.2:1b",
         },
       },
+      models: {
+        providers: {
+          ollama: {
+            baseUrl: "http://ollama-shared:11434",
+          },
+        },
+      },
     }, null, 2)
   );
 
