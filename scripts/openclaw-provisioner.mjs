@@ -171,7 +171,8 @@ async function handleQR(req, res) {
       `docker exec openclaw-${s} openclaw --profile ${s} channels list 2>&1`,
       { timeout: 10000 }
     ).toString();
-    if (statusOut.includes("linked")) {
+    // Check for ACTUAL linked state — "not linked" contains "linked" so we must exclude it
+    if (statusOut.includes("linked") && !statusOut.includes("not linked")) {
       return json(res, 200, { connected: true, qr: null });
     }
   } catch { /* not connected */ }
