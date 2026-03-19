@@ -69,7 +69,7 @@ async function handleDeploy(req, res) {
       },
       agents: {
         defaults: {
-          model: "ollama/llama3.2:1b",
+          model: "ollama/llama3.2:3b",
         },
       },
       models: {
