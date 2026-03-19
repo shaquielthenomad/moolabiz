@@ -110,6 +110,7 @@ function DashboardNav({ current }: { current: "overview" | "products" | "orders"
     { id: "overview" as const, label: "Overview", href: "/dashboard" },
     { id: "products" as const, label: "Products", href: "/dashboard/products" },
     { id: "orders" as const, label: "Orders", href: "/dashboard/orders" },
+    { id: "settings" as const, label: "Settings", href: "/dashboard/settings" },
   ];
 
   return (

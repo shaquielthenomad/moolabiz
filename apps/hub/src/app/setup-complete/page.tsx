@@ -316,8 +316,14 @@ function SetupContent() {
                 Share store link on WhatsApp
               </a>
               <a
+                href="/dashboard"
+                className="flex items-center justify-center w-full border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors py-3 rounded-lg"
+              >
+                Go to your dashboard
+              </a>
+              <a
                 href="/"
-                className="flex items-center justify-center w-full text-sm text-slate-500 hover:text-slate-700 transition-colors py-2"
+                className="flex items-center justify-center w-full text-sm text-slate-400 hover:text-slate-600 transition-colors py-2"
               >
                 Back to MoolaBiz
               </a>

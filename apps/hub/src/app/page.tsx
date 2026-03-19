@@ -709,8 +709,8 @@ function SignupForm({
           className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base transition-colors"
         >
           <option value="yoco">Yoco</option>
-          <option value="ozow">Ozow</option>
-          <option value="payfast">PayFast</option>
+          <option value="ozow">Ozow (coming soon)</option>
+          <option value="payfast">PayFast (coming soon)</option>
         </select>
       </div>
 
