@@ -13,6 +13,9 @@ const slug = process.env.BUSINESS_SLUG || "";
 export const metadata: Metadata = {
   title: `${businessName} | MoolaBiz`,
   description: `Browse and order from ${businessName}. Fast, easy, powered by MoolaBiz.`,
+  icons: {
+    icon: "/favicon.svg",
+  },
   openGraph: {
     title: `${businessName} — Shop Online`,
     description: `Browse products and place your order from ${businessName}.`,
@@ -31,7 +34,6 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="whatsapp" content={process.env.WHATSAPP_NUMBER || ""} />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💸</text></svg>" />
       </head>
       <body className={`${geistSans.variable} antialiased bg-white text-slate-900`}>
         {children}
