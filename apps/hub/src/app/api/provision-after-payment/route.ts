@@ -117,6 +117,7 @@ export async function POST(request: Request) {
           businessName: merchant.businessName,
           ownerPhone: merchant.whatsappNumber,
           paymentProvider: merchant.paymentProvider,
+          apiSecret,
         });
         openclawContainerId = ocResult.containerId;
         console.log(`[provision] OpenClaw deployed: ${openclawContainerId}`);

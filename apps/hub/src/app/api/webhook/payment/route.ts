@@ -161,6 +161,7 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
         businessName: merchant.businessName,
         ownerPhone: merchant.whatsappNumber,
         paymentProvider: merchant.paymentProvider,
+        apiSecret,
       });
       openclawContainerId = ocResult.containerId;
       console.log(`[stripe] OpenClaw deployed: ${openclawContainerId}`);

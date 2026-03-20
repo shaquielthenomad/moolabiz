@@ -46,6 +46,7 @@ export async function deployOpenClaw(opts: {
   businessName: string;
   ownerPhone: string;
   paymentProvider: string;
+  apiSecret?: string;
 }): Promise<{ containerId: string }> {
   console.log(`[openclaw] Deploying for ${opts.slug}...`);
 
@@ -53,6 +54,7 @@ export async function deployOpenClaw(opts: {
     slug: opts.slug,
     businessName: opts.businessName,
     ownerPhone: opts.ownerPhone,
+    apiSecret: opts.apiSecret,
   });
 
   const data = (await res.json()) as { containerId: string };
