@@ -69,13 +69,20 @@ async function handleDeploy(req, res) {
       },
       agents: {
         defaults: {
-          model: "ollama/llama3.2:3b",
+          model: "groq/llama-3.3-70b-versatile",
+          timeoutSeconds: 300,
+          workspace: `/root/.openclaw-${s}/workspace`,
         },
       },
       models: {
         providers: {
-          ollama: {
-            baseUrl: "http://ollama-shared:11434",
+          groq: {
+            baseUrl: "https://api.groq.com/openai/v1",
+            api: "openai-completions",
+            apiKey: process.env.GROQ_API_KEY || "",
+            models: [
+              { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", reasoning: false, input: ["text"], contextWindow: 128000, maxTokens: 4096 }
+            ],
           },
         },
       },
