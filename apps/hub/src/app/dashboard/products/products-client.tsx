@@ -29,6 +29,7 @@ export function ProductsClient({
 }) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{
     type: "error" | "success";
     message: string;
@@ -176,53 +177,75 @@ export function ProductsClient({
                     key={product.id}
                     className="bg-white rounded-xl border border-slate-200 shadow-sm p-4"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-slate-900 text-sm truncate">
-                            {product.name}
-                          </h3>
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                              product.inStock
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-red-50 text-red-700"
-                            }`}
-                          >
-                            {product.inStock ? "In stock" : "Out of stock"}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-500 mt-0.5">
-                          R{(product.price / 100).toFixed(2)}
-                          {product.category && (
-                            <span className="ml-2 text-slate-400">
-                              {product.category}
+                    {editingId === product.id ? (
+                      <EditProductForm
+                        product={product}
+                        botApiBase={botApiBase}
+                        apiSecret={merchant.apiSecret}
+                        onSave={(updated) => {
+                          setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+                          setEditingId(null);
+                          showNotif("success", "Product updated.");
+                        }}
+                        onCancel={() => setEditingId(null)}
+                        onError={(msg) => showNotif("error", msg)}
+                      />
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setEditingId(product.id)}>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-slate-900 text-sm truncate">
+                              {product.name}
+                            </h3>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                product.inStock
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-red-50 text-red-700"
+                              }`}
+                            >
+                              {product.inStock ? "In stock" : "Out of stock"}
                             </span>
-                          )}
-                        </p>
-                        {product.description && (
-                          <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-                            {product.description}
+                          </div>
+                          <p className="text-sm text-slate-500 mt-0.5">
+                            R{(product.price / 100).toFixed(2)}
+                            {product.category && (
+                              <span className="ml-2 text-slate-400">
+                                {product.category}
+                              </span>
+                            )}
                           </p>
-                        )}
+                          {product.description && (
+                            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                              {product.description}
+                            </p>
+                          )}
+                          <p className="text-xs text-emerald-600 mt-1">Tap to edit</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => setEditingId(product.id)}
+                            className="text-xs font-medium text-emerald-600 hover:text-emerald-700 px-2 py-1 rounded border border-emerald-200 hover:bg-emerald-50 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleToggleStock(product)}
+                            disabled={loading === product.id}
+                            className="text-xs font-medium text-slate-500 hover:text-slate-700 px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                          >
+                            {product.inStock ? "Mark out" : "Mark in"}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(product.id)}
+                            disabled={loading === product.id}
+                            className="text-xs font-medium text-red-500 hover:text-red-700 px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => handleToggleStock(product)}
-                          disabled={loading === product.id}
-                          className="text-xs font-medium text-slate-500 hover:text-slate-700 px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
-                        >
-                          {product.inStock ? "Mark out" : "Mark in"}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          disabled={loading === product.id}
-                          className="text-xs font-medium text-red-500 hover:text-red-700 px-2 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -388,6 +411,126 @@ function AddProductForm({
       >
         {submitting ? "Adding..." : "Add product"}
       </button>
+    </form>
+  );
+}
+
+function EditProductForm({
+  product,
+  botApiBase,
+  apiSecret,
+  onSave,
+  onCancel,
+  onError,
+}: {
+  product: Product;
+  botApiBase: string;
+  apiSecret: string;
+  onSave: (p: Product) => void;
+  onCancel: () => void;
+  onError: (msg: string) => void;
+}) {
+  const [name, setName] = useState(product.name);
+  const [price, setPrice] = useState((product.price / 100).toString());
+  const [description, setDescription] = useState(product.description || "");
+  const [category, setCategory] = useState(product.category || "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch(`${botApiBase}/products/${product.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiSecret}`,
+        },
+        body: JSON.stringify({
+          name,
+          price: Math.round(parseFloat(price) * 100),
+          description,
+          category,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        onSave({
+          ...product,
+          name: updated.order?.name || name,
+          price: Math.round(parseFloat(price) * 100),
+          description,
+          category,
+        });
+      } else {
+        onError("Could not update product.");
+      }
+    } catch {
+      onError("Could not connect to your store.");
+    }
+    setSaving(false);
+  }
+
+  return (
+    <form onSubmit={handleSave} className="space-y-3">
+      <div>
+        <label className="block text-xs font-medium text-slate-600 mb-1">Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Price (ZAR)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
+            className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Category</label>
+          <input
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={2}
+          className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none resize-none"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save changes"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="border border-slate-200 text-slate-600 font-medium text-sm px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }
