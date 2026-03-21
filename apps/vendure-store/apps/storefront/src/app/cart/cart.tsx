@@ -5,8 +5,6 @@ import {query} from "@/lib/vendure/api";
 import {GetActiveOrderQuery} from "@/lib/vendure/queries";
 
 export async function Cart() {
-    "use cache: private"
-
     const {data} = await query(GetActiveOrderQuery, {}, {
         useAuthToken: true,
     });

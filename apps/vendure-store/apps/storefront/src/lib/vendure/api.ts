@@ -8,8 +8,12 @@ const VENDURE_CHANNEL_TOKEN_FALLBACK = process.env.VENDURE_CHANNEL_TOKEN || proc
 const VENDURE_AUTH_TOKEN_HEADER = process.env.VENDURE_AUTH_TOKEN_HEADER || 'vendure-auth-token';
 const VENDURE_CHANNEL_TOKEN_HEADER = process.env.VENDURE_CHANNEL_TOKEN_HEADER || 'vendure-token';
 
-if (!VENDURE_API_URL) {
-    throw new Error('VENDURE_SHOP_API_URL or NEXT_PUBLIC_VENDURE_SHOP_API_URL environment variable is not set');
+// Validated lazily at request time — not at import/build time
+function getApiUrl(): string {
+    if (!VENDURE_API_URL) {
+        throw new Error('VENDURE_SHOP_API_URL or NEXT_PUBLIC_VENDURE_SHOP_API_URL environment variable is not set');
+    }
+    return VENDURE_API_URL;
 }
 
 /**
@@ -111,7 +115,7 @@ export async function query<TResult, TVariables>(
     // Set the channel token header — dynamic resolution from middleware, env fallback
     headers[VENDURE_CHANNEL_TOKEN_HEADER] = channelToken || await getChannelToken();
 
-    const response = await fetch(VENDURE_API_URL!, {
+    const response = await fetch(getApiUrl(), {
         ...fetchOptions,
         method: 'POST',
         headers,

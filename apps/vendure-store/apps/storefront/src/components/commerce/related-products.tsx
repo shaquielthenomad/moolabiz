@@ -1,5 +1,4 @@
 import { ProductCarousel } from "@/components/commerce/product-carousel";
-import { cacheLife, cacheTag } from "next/cache";
 import { query } from "@/lib/vendure/api";
 import { GetCollectionProductsQuery } from "@/lib/vendure/queries";
 import { readFragment } from "@/graphql";
@@ -11,10 +10,6 @@ interface RelatedProductsProps {
 }
 
 async function getRelatedProducts(collectionSlug: string, currentProductId: string) {
-    'use cache'
-    cacheLife('hours')
-    cacheTag(`related-products-${collectionSlug}`)
-
     const result = await query(GetCollectionProductsQuery, {
         slug: collectionSlug,
         input: {

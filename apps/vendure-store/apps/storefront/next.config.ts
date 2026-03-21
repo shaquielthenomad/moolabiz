@@ -26,7 +26,12 @@ const nextConfig: NextConfig = {
     // the merchant from the hostname and sets the correct channel token.
     allowedDevOrigins: ['*.localhost'],
     experimental: {
-        rootParams: true
+        rootParams: true,
+        // Disable turbopack for build compatibility in Docker
+    },
+    // Explicitly disable turbopack for builds
+    turbopack: {
+        root: '.',
     }
 };
 

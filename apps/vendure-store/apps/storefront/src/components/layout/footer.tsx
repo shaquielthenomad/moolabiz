@@ -1,4 +1,3 @@
-import {cacheLife} from 'next/cache';
 import {getTopCollections} from '@/lib/vendure/cached';
 import Image from "next/image";
 import Link from "next/link";
@@ -6,9 +5,6 @@ import {SITE_NAME} from "@/lib/metadata";
 
 
 async function Copyright() {
-    'use cache'
-    cacheLife('days');
-
     return (
         <div>
             © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
@@ -17,9 +13,6 @@ async function Copyright() {
 }
 
 export async function Footer() {
-    'use cache'
-    cacheLife('days');
-
     const collections = await getTopCollections();
 
     return (
