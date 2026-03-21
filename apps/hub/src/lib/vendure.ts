@@ -101,7 +101,7 @@ export async function uploadAssetToVendure(
   const formData = new FormData();
   formData.append("operations", operations);
   formData.append("map", map);
-  formData.append("0", new Blob([fileBuffer], { type: mimeType }), filename);
+  formData.append("0", new Blob([new Uint8Array(fileBuffer)], { type: mimeType }), filename);
 
   const res = await fetch(VENDURE_URL, {
     method: "POST",
