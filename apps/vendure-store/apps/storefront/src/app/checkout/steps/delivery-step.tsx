@@ -75,9 +75,9 @@ export default function DeliveryStep({ onComplete }: DeliveryStepProps) {
                   <p className="font-semibold">
                     {method.priceWithTax === 0
                       ? 'FREE'
-                      : (method.priceWithTax / 100).toLocaleString('en-US', {
+                      : (method.priceWithTax / 100).toLocaleString('en-ZA', {
                           style: 'currency',
-                          currency: 'USD',
+                          currency: order?.currencyCode ?? 'ZAR',
                         })}
                   </p>
                 </div>

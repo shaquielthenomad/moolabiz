@@ -13,6 +13,17 @@ const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string; flag: string 
 
 const PAYMENT_ERROR_PATTERN = /payment system unavailable|yoco|checkout/i;
 
+const COMING_SOON_FEATURES = new Set([
+  "Appointment booking",
+  "Daily revenue reports",
+  "AI business advisor",
+  "Custom bot personality",
+  "Advanced analytics",
+  "Multiple WhatsApp numbers",
+  "Custom integrations",
+  "SLA guarantee",
+]);
+
 const PLANS = [
   {
     id: "intro" as PlanType,
@@ -826,7 +837,12 @@ function PlanPicker({
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
-                  {f}
+                  <span>
+                    {f}
+                    {COMING_SOON_FEATURES.has(f) && (
+                      <span className="ml-1 text-xs text-slate-400 font-normal">(Coming soon)</span>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>

@@ -57,7 +57,9 @@ export const config: VendureConfig = {
         password: process.env.DB_PASSWORD || '',
     },
     paymentOptions: {
-        paymentMethodHandlers: IS_DEV ? [dummyPaymentHandler] : [],
+        // dummyPaymentHandler auto-settles payments — used for Cash on Delivery / EFT
+        // where the merchant handles payment outside the platform.
+        paymentMethodHandlers: [dummyPaymentHandler],
     },
     // When adding or altering custom field definitions, the database will
     // need to be updated. See the "Migrations" section in README.md.
@@ -80,11 +82,22 @@ export const config: VendureConfig = {
         DefaultJobQueuePlugin.init({ useDatabaseForBuffer: true }),
         DefaultSearchPlugin.init({ bufferUpdates: false, indexStockStatus: true }),
         EmailPlugin.init({
-            devMode: true,
+            devMode: IS_DEV,
             outputPath: path.join(__dirname, '../static/email/test-emails'),
             route: 'mailbox',
             handlers: defaultEmailHandlers,
             templateLoader: new FileBasedTemplateLoader(path.join(__dirname, '../static/email/templates')),
+            // In production, send emails via Resend SMTP relay (or custom SMTP).
+            // In dev, emails are written to disk (devMode: true above).
+            transport: IS_DEV ? undefined : {
+                type: 'smtp' as const,
+                host: process.env.SMTP_HOST || 'smtp.resend.com',
+                port: +(process.env.SMTP_PORT || 587),
+                auth: {
+                    user: process.env.SMTP_USER || 'resend',
+                    pass: process.env.SMTP_PASSWORD || process.env.RESEND_API_KEY || '',
+                },
+            },
             globalTemplateVars: {
                 fromAddress: process.env.EMAIL_FROM_ADDRESS || '"MoolaBiz" <noreply@moolabiz.shop>',
                 verifyEmailAddressUrl: process.env.STOREFRONT_URL ? `${process.env.STOREFRONT_URL}/verify` : 'http://localhost:8080/verify',

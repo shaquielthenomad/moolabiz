@@ -5,6 +5,7 @@ import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
   vendureAdminQuery,
+  uploadAssetToVendure,
   GET_PRODUCT_QUERY,
   UPDATE_PRODUCT_MUTATION,
   UPDATE_PRODUCT_VARIANTS_MUTATION,
@@ -42,11 +43,50 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
 
-  let body: Record<string, unknown>;
+  let name: string | undefined;
+  let description: string | undefined;
+  let inStock: boolean | undefined;
+  let price: number | undefined;
+  let category: string | undefined;
+  let sku: string | undefined;
+  let stockQuantity: number | undefined;
+  let imageFile: File | null = null;
+
+  const contentType = request.headers.get("content-type") || "";
+
   try {
-    body = await request.json();
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      const nameVal = formData.get("name") as string | null;
+      if (nameVal) name = nameVal;
+      const priceVal = formData.get("price") as string | null;
+      if (priceVal) price = Number(priceVal);
+      const descVal = formData.get("description") as string | null;
+      if (descVal !== null) description = descVal;
+      const catVal = formData.get("category") as string | null;
+      if (catVal) category = catVal;
+      const skuVal = formData.get("sku") as string | null;
+      if (skuVal) sku = skuVal;
+      const stockVal = formData.get("stockQuantity") as string | null;
+      if (stockVal) stockQuantity = Number(stockVal);
+      const inStockVal = formData.get("inStock") as string | null;
+      if (inStockVal !== null) inStock = inStockVal === "true";
+      const file = formData.get("image");
+      if (file && file instanceof File && file.size > 0) {
+        imageFile = file;
+      }
+    } else {
+      const body = await request.json();
+      name = body.name;
+      description = body.description;
+      inStock = body.inStock;
+      price = body.price;
+      category = body.category;
+      sku = body.sku;
+      stockQuantity = body.stockQuantity;
+    }
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
   try {
@@ -58,19 +98,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const { name, description, inStock, price, category, sku, stockQuantity } = body as {
-      name?: string;
-      description?: string;
-      inStock?: boolean;
-      price?: number;
-      category?: string;
-      sku?: string;
-      stockQuantity?: number;
-    };
+    // Upload image asset if provided
+    let featuredAssetId: string | undefined;
+    if (imageFile) {
+      try {
+        const buffer = Buffer.from(await imageFile.arrayBuffer());
+        const result = await uploadAssetToVendure(
+          merchant.vendureChannelToken!,
+          buffer,
+          imageFile.name || `product-${id}.jpg`,
+          imageFile.type || "image/jpeg"
+        );
+        featuredAssetId = result.assetId;
+      } catch (uploadErr) {
+        console.error("[dashboard/products PATCH] Image upload failed:", uploadErr);
+      }
+    }
 
     // Update product-level fields
     const hasProductUpdates =
-      name !== undefined || description !== undefined || inStock !== undefined;
+      name !== undefined || description !== undefined || inStock !== undefined || featuredAssetId;
 
     if (hasProductUpdates) {
       const translations: Record<string, unknown>[] = [];
@@ -84,6 +131,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const updateInput: Record<string, unknown> = { id };
       if (translations.length) updateInput.translations = translations;
       if (inStock !== undefined) updateInput.enabled = inStock;
+      if (featuredAssetId) {
+        updateInput.featuredAssetId = featuredAssetId;
+        updateInput.assetIds = [featuredAssetId];
+      }
 
       await vendureAdminQuery(
         merchant.vendureChannelToken!,

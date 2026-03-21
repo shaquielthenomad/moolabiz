@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 export default function OnboardPage() {
   const [businessName, setBusinessName] = useState("Your Store");
@@ -64,7 +64,7 @@ export default function OnboardPage() {
               <p><code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">/orders</code></p>
             </div>
           </div>
-          <a href="/" className="inline-block bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-colors">
+          <a href="https://moolabiz.shop/dashboard" className="inline-block bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-colors">
             Go to your store
           </a>
           <p className="text-xs text-slate-400">Powered by MoolaBiz</p>
@@ -93,12 +93,7 @@ export default function OnboardPage() {
               <p className="text-sm text-slate-400">Generating QR code...</p>
             </div>
           ) : (
-            <pre
-              className="bg-white border border-slate-200 rounded-xl p-4 text-[6px] sm:text-[8px] leading-none font-mono select-none overflow-hidden"
-              style={{ letterSpacing: "-0.5px", lineHeight: "1" }}
-            >
-              {qr}
-            </pre>
+            <QrSvg ascii={qr} size={280} />
           )}
         </div>
 
@@ -126,5 +121,60 @@ export default function OnboardPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+/**
+ * Converts ASCII art QR code into an SVG for crisp, scannable rendering on mobile.
+ * The ASCII QR uses block characters (dark) and spaces (light).
+ * We parse each line/character into a grid and render filled rectangles.
+ */
+function QrSvg({ ascii, size }: { ascii: string; size: number }) {
+  const svg = useMemo(() => {
+    const lines = ascii.split("\n").filter((l) => l.length > 0);
+    const rows = lines.length;
+    const cols = Math.max(...lines.map((l) => l.length));
+
+    if (rows === 0 || cols === 0) return null;
+
+    // Each module = one cell in the grid
+    const cellSize = size / Math.max(rows, cols);
+    const rects: string[] = [];
+
+    for (let y = 0; y < lines.length; y++) {
+      for (let x = 0; x < lines[y].length; x++) {
+        const ch = lines[y][x];
+        // Block characters (dark modules): full block, upper/lower half blocks, dark shades
+        if (ch !== " " && ch !== "\u00A0") {
+          rects.push(
+            `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize + 0.5}" height="${cellSize + 0.5}" />`
+          );
+        }
+      }
+    }
+
+    const viewW = cols * cellSize;
+    const viewH = rows * cellSize;
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewW} ${viewH}" width="${size}" height="${size}" shape-rendering="crispEdges"><rect width="${viewW}" height="${viewH}" fill="white"/><g fill="black">${rects.join("")}</g></svg>`;
+  }, [ascii, size]);
+
+  if (!svg) {
+    return (
+      <pre
+        className="bg-white border border-slate-200 rounded-xl p-4 text-[6px] leading-none font-mono select-none overflow-hidden"
+        style={{ letterSpacing: "-0.5px", lineHeight: "1" }}
+      >
+        {ascii}
+      </pre>
+    );
+  }
+
+  return (
+    <div
+      className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-center"
+      style={{ width: size + 32, height: size + 32 }}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
   );
 }

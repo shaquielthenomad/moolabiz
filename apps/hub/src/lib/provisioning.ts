@@ -14,6 +14,7 @@ import {
   createMerchantChannel,
   createMerchantSeller,
   createDefaultShippingMethod,
+  createDefaultPaymentMethod,
   deleteMerchantChannel,
 } from "@/lib/vendure-admin";
 import { sendWelcomeEmail } from "@/lib/email";
@@ -81,6 +82,9 @@ export async function provisionMerchant(
 
       // Create a default shipping method for checkout to work
       await createDefaultShippingMethod(vendureChannelId);
+
+      // Create a default payment method (Cash on Delivery / EFT)
+      await createDefaultPaymentMethod(vendureChannelId);
 
       // Store Vendure channel info immediately
       await db

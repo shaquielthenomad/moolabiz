@@ -49,6 +49,91 @@ export async function vendureAdminQuery<T = unknown>(
 }
 
 // ---------------------------------------------------------------------------
+// Asset upload helper
+// ---------------------------------------------------------------------------
+
+const CREATE_ASSETS_MUTATION = `
+  mutation CreateAssets($input: [CreateAssetInput!]!) {
+    createAssets(input: $input) {
+      ... on Asset {
+        id
+        name
+        preview
+        source
+      }
+      ... on MimeTypeError {
+        errorCode
+        message
+      }
+    }
+  }
+`;
+
+/**
+ * Upload an image file to Vendure's asset server via the Admin API multipart upload.
+ * Returns the asset ID on success.
+ */
+export async function uploadAssetToVendure(
+  channelToken: string,
+  fileBuffer: Buffer,
+  filename: string,
+  mimeType: string
+): Promise<{ assetId: string; preview: string }> {
+  const { getAuthToken } = await import("./vendure-admin");
+  const authToken = await getAuthToken();
+
+  const VENDURE_URL =
+    process.env.VENDURE_ADMIN_API_URL || "http://localhost:3000/admin-api";
+
+  // Vendure uses the GraphQL multipart request spec
+  // https://github.com/jaydenseric/graphql-multipart-request-spec
+  const operations = JSON.stringify({
+    query: CREATE_ASSETS_MUTATION,
+    variables: {
+      input: [{ file: null }],
+    },
+  });
+
+  const map = JSON.stringify({
+    "0": ["variables.input.0.file"],
+  });
+
+  const formData = new FormData();
+  formData.append("operations", operations);
+  formData.append("map", map);
+  formData.append("0", new Blob([fileBuffer], { type: mimeType }), filename);
+
+  const res = await fetch(VENDURE_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      "vendure-token": channelToken,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Asset upload failed: ${res.status} ${text.slice(0, 300)}`);
+  }
+
+  const json = await res.json();
+
+  if (json.errors?.length) {
+    throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
+  }
+
+  const result = json.data?.createAssets?.[0];
+  if (!result?.id) {
+    throw new Error(
+      `Asset upload returned unexpected result: ${JSON.stringify(result)}`
+    );
+  }
+
+  return { assetId: result.id, preview: result.preview || "" };
+}
+
+// ---------------------------------------------------------------------------
 // GraphQL fragments & queries used by the bridge routes
 // ---------------------------------------------------------------------------
 

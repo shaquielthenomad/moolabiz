@@ -25,13 +25,13 @@ export default function SettingsClient({
     setSaved(false);
 
     try {
-      const res = await fetch(`https://${subdomain}/api/settings`, {
+      const res = await fetch(`/api/vendure-bridge/settings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiSecret}`,
         },
-        body: JSON.stringify({ key: "yoco_secret_key", value: yocoKey.trim() }),
+        body: JSON.stringify({ yocoSecretKey: yocoKey.trim() }),
       });
 
       if (!res.ok) {
@@ -42,7 +42,7 @@ export default function SettingsClient({
         setYocoKey("");
       }
     } catch {
-      setError("Could not connect to your store. Is it deployed?");
+      setError("Could not connect. Please try again.");
     }
     setSaving(false);
   }

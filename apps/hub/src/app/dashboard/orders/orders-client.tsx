@@ -185,8 +185,15 @@ export function OrdersClient({
             {orders.length === 0 ? (
               <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
                 <p className="text-slate-500 text-sm">
-                  No orders yet. Orders will appear here when customers place
-                  them through your store.
+                  No orders yet. Share your store link to start getting orders:{" "}
+                  <a
+                    href={`https://${merchant.slug}.store.moolabiz.shop`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-600 font-medium hover:underline break-all"
+                  >
+                    https://{merchant.slug}.store.moolabiz.shop
+                  </a>
                 </p>
               </div>
             ) : (

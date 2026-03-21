@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useRef, type FormEvent, type ChangeEvent } from "react";
 import { DashboardNav } from "../dashboard-client";
 
 interface Product {
@@ -10,6 +10,7 @@ interface Product {
   description: string;
   category: string;
   inStock: boolean;
+  imageUrl?: string;
   sku?: string;
   stockQuantity?: number;
   variants?: Variant[];
@@ -185,7 +186,8 @@ export function ProductsClient({
             {products.length === 0 && !showAddForm ? (
               <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
                 <p className="text-slate-500 text-sm">
-                  No products yet. Add your first product to get started.
+                  No products yet. Add your first product using the <span className="font-semibold text-slate-700">+ Add product</span> button above, or message your WhatsApp bot with{" "}
+                  <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono text-slate-700">/add-product</code>.
                 </p>
               </div>
             ) : (
@@ -214,6 +216,14 @@ export function ProductsClient({
                       />
                     ) : (
                       <div className="flex items-start justify-between gap-3">
+                        {product.imageUrl && (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-14 h-14 rounded-lg object-cover shrink-0 border border-slate-200 cursor-pointer"
+                            onClick={() => setEditingId(product.id)}
+                          />
+                        )}
                         <div
                           className="flex-1 min-w-0 cursor-pointer"
                           onClick={() => setEditingId(product.id)}
@@ -326,30 +336,59 @@ function AddProductForm({
   const [category, setCategory] = useState("");
   const [sku, setSku] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setImagePreview(null);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      const payload: Record<string, unknown> = {
-        name,
-        price: Math.round(parseFloat(price) * 100),
-        description,
-        category,
-      };
+      const file = fileInputRef.current?.files?.[0];
 
-      if (showAdvanced) {
-        if (sku) payload.sku = sku;
-        if (stockQuantity) payload.stockQuantity = parseInt(stockQuantity, 10);
+      let res: Response;
+      if (file) {
+        // Use FormData when image is present
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("price", String(Math.round(parseFloat(price) * 100)));
+        formData.append("description", description);
+        formData.append("category", category);
+        if (showAdvanced && sku) formData.append("sku", sku);
+        if (showAdvanced && stockQuantity) formData.append("stockQuantity", stockQuantity);
+        formData.append("image", file);
+
+        res = await fetch(apiBase, { method: "POST", body: formData });
+      } else {
+        // JSON when no image
+        const payload: Record<string, unknown> = {
+          name,
+          price: Math.round(parseFloat(price) * 100),
+          description,
+          category,
+        };
+        if (showAdvanced) {
+          if (sku) payload.sku = sku;
+          if (stockQuantity) payload.stockQuantity = parseInt(stockQuantity, 10);
+        }
+        res = await fetch(apiBase, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       }
-
-      const res = await fetch(apiBase, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
 
       if (res.ok) {
         const product = await res.json();
@@ -360,6 +399,8 @@ function AddProductForm({
         setCategory("");
         setSku("");
         setStockQuantity("");
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
       } else {
         onError("Could not add product. Please try again.");
       }
@@ -450,6 +491,33 @@ function AddProductForm({
         />
       </div>
 
+      {/* Product image upload */}
+      <div>
+        <label
+          htmlFor="productImage"
+          className="block text-sm font-medium text-slate-700 mb-1"
+        >
+          Product image (optional)
+        </label>
+        <div className="flex items-center gap-3">
+          {imagePreview && (
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+            />
+          )}
+          <input
+            id="productImage"
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="block w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 file:cursor-pointer"
+          />
+        </div>
+      </div>
+
       {showAdvanced && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
           <div>
@@ -526,29 +594,59 @@ function EditProductForm({
   const [stockQuantity, setStockQuantity] = useState(
     product.stockQuantity?.toString() || ""
   );
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    product.imageUrl || null
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
+
+  function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = {
-        name,
-        price: Math.round(parseFloat(price) * 100),
-        description,
-        category,
-      };
+      const file = fileInputRef.current?.files?.[0];
 
-      if (showAdvanced) {
-        if (sku) payload.sku = sku;
-        if (stockQuantity) payload.stockQuantity = parseInt(stockQuantity, 10);
+      let res: Response;
+      if (file) {
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("price", String(Math.round(parseFloat(price) * 100)));
+        formData.append("description", description);
+        formData.append("category", category);
+        if (showAdvanced && sku) formData.append("sku", sku);
+        if (showAdvanced && stockQuantity) formData.append("stockQuantity", stockQuantity);
+        formData.append("image", file);
+
+        res = await fetch(`${apiBase}/${product.id}`, {
+          method: "PATCH",
+          body: formData,
+        });
+      } else {
+        const payload: Record<string, unknown> = {
+          name,
+          price: Math.round(parseFloat(price) * 100),
+          description,
+          category,
+        };
+        if (showAdvanced) {
+          if (sku) payload.sku = sku;
+          if (stockQuantity) payload.stockQuantity = parseInt(stockQuantity, 10);
+        }
+        res = await fetch(`${apiBase}/${product.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       }
-
-      const res = await fetch(`${apiBase}/${product.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
 
       if (res.ok) {
         const updated = await res.json();
@@ -559,6 +657,7 @@ function EditProductForm({
           description: updated.description ?? description,
           category: updated.category ?? category,
           inStock: updated.inStock ?? product.inStock,
+          imageUrl: updated.imageUrl ?? product.imageUrl,
           sku: updated.sku ?? sku,
           stockQuantity: updated.stockQuantity ?? product.stockQuantity,
           variants: updated.variants ?? product.variants,
@@ -623,6 +722,29 @@ function EditProductForm({
           rows={2}
           className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none resize-none"
         />
+      </div>
+
+      {/* Product image upload */}
+      <div>
+        <label className="block text-xs font-medium text-slate-600 mb-1">
+          Product image
+        </label>
+        <div className="flex items-center gap-3">
+          {imagePreview && (
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+            />
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="block w-full text-sm text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 file:cursor-pointer"
+          />
+        </div>
       </div>
 
       {showAdvanced && (

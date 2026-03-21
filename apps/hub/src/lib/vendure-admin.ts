@@ -376,6 +376,66 @@ export async function createDefaultShippingMethod(
 }
 
 /**
+ * Create a default payment method (Cash on Delivery / EFT / Direct Transfer)
+ * assigned to a merchant's channel.
+ * Uses the built-in dummy-payment-handler which auto-settles — perfect for
+ * offline payment collection (cash, EFT, mobile money).
+ */
+export async function createDefaultPaymentMethod(
+  channelId: string
+): Promise<{ paymentMethodId: string }> {
+  const data = await adminGql<{
+    createPaymentMethod: { id: string; code: string };
+  }>(
+    `mutation CreatePaymentMethod($input: CreatePaymentMethodInput!) {
+      createPaymentMethod(input: $input) {
+        id
+        code
+      }
+    }`,
+    {
+      input: {
+        code: `cod-eft-${channelId}`,
+        enabled: true,
+        translations: [
+          {
+            languageCode: "en",
+            name: "Cash on Delivery / EFT",
+            description:
+              "Pay the merchant directly via cash, EFT, or mobile payment",
+          },
+        ],
+        handler: {
+          code: "dummy-payment-handler",
+          arguments: [],
+        },
+      },
+    }
+  );
+
+  // Assign the payment method to the merchant's channel
+  await adminGql(
+    `mutation AssignPaymentMethodsToChannel($input: AssignPaymentMethodsToChannelInput!) {
+      assignPaymentMethodsToChannel(input: $input) {
+        id
+      }
+    }`,
+    {
+      input: {
+        paymentMethodIds: [data.createPaymentMethod.id],
+        channelId,
+      },
+    }
+  );
+
+  console.log(
+    `[vendure-admin] Created default payment method (id: ${data.createPaymentMethod.id}) for channel ${channelId}`
+  );
+
+  return { paymentMethodId: data.createPaymentMethod.id };
+}
+
+/**
  * Look up a channel by its code (slug).
  * Returns null if not found.
  */
