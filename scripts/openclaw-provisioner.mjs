@@ -321,8 +321,8 @@ On success: "Payment key saved! Customers can now pay online."
     `-e NODE_OPTIONS="--max-old-space-size=1536"`,
     `-e OPENCLAW_CONFIG_PATH=/root/.openclaw-${s}/config.json`,
     `-e CATALOG_URL=${catalogUrl}`,
-    ...(apiSecret ? [`-e API_SECRET=${apiSecret}`] : []),
-    ...(ownerPhone ? [`-e OWNER_PHONE=${ownerPhone}`] : []),
+    ...(apiSecret ? [`-e "API_SECRET=${apiSecret}"`] : []),
+    ...(ownerPhone ? [`-e "OWNER_PHONE=${ownerPhone}"`] : []),
     "moolabiz/openclaw:latest",
     `--profile ${s} gateway --port 18789 --bind lan --allow-unconfigured`,
   ].join(" ");
