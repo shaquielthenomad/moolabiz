@@ -407,7 +407,9 @@ export async function createDefaultPaymentMethod(
         ],
         handler: {
           code: "dummy-payment-handler",
-          arguments: [],
+          arguments: [
+            { name: "automaticSettle", value: "true" },
+          ],
         },
       },
     }
