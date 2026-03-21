@@ -7,16 +7,18 @@ import {Suspense} from "react";
 import {SearchInput} from '@/components/layout/search-input';
 import {NavbarUserSkeleton} from '@/components/shared/skeletons/navbar-user-skeleton';
 import {SearchInputSkeleton} from '@/components/shared/skeletons/search-input-skeleton';
-import {SITE_NAME} from '@/lib/metadata';
+import {getStoreName} from '@/lib/vendure/api';
 
-export function Navbar() {
+export async function Navbar() {
+    const storeName = (await getStoreName()) || 'Store';
+
     return (
         <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
             <div className="container mx-auto px-4">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center gap-8">
                         <Link href="/" className="text-xl font-bold">
-                            {SITE_NAME}
+                            {storeName}
                         </Link>
                         <nav className="hidden md:flex items-center gap-6">
                             <Suspense>

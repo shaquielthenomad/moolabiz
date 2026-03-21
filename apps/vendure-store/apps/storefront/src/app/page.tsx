@@ -1,25 +1,30 @@
 import type {Metadata} from "next";
 import {HeroSection} from "@/components/layout/hero-section";
 import {FeaturedProducts} from "@/components/commerce/featured-products";
-import {SITE_NAME, SITE_URL, buildCanonicalUrl} from "@/lib/metadata";
+import {SITE_URL, buildCanonicalUrl} from "@/lib/metadata";
+import {getStoreName} from "@/lib/vendure/api";
 
-export const metadata: Metadata = {
-    title: {
-        absolute: `${SITE_NAME} - Your One-Stop Shop`,
-    },
-    description:
-        "Discover high-quality products at competitive prices. Shop now for the best deals at our online store.",
-    alternates: {
-        canonical: buildCanonicalUrl("/"),
-    },
-    openGraph: {
-        title: `${SITE_NAME} - Your One-Stop Shop`,
+export async function generateMetadata(): Promise<Metadata> {
+    const storeName = (await getStoreName()) || 'Store';
+
+    return {
+        title: {
+            absolute: `${storeName} - Your One-Stop Shop`,
+        },
         description:
-            "Discover high-quality products at competitive prices. Shop now for the best deals.",
-        type: "website",
-        url: SITE_URL,
-    },
-};
+            `Discover high-quality products at competitive prices. Shop now for the best deals at ${storeName}.`,
+        alternates: {
+            canonical: buildCanonicalUrl("/"),
+        },
+        openGraph: {
+            title: `${storeName} - Your One-Stop Shop`,
+            description:
+                "Discover high-quality products at competitive prices. Shop now for the best deals.",
+            type: "website",
+            url: SITE_URL,
+        },
+    };
+}
 
 export default async function Home(_props: PageProps<'/'>) {
     return (

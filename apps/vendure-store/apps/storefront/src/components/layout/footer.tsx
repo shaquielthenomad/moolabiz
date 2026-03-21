@@ -1,18 +1,25 @@
 import {getTopCollections} from '@/lib/vendure/cached';
 import Link from "next/link";
-import {SITE_NAME} from "@/lib/metadata";
+import {getStoreName} from "@/lib/vendure/api";
 
 
 async function Copyright() {
+    const storeName = (await getStoreName()) || 'Store';
     return (
         <div>
-            © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
+            © {new Date().getFullYear()} {storeName}. All rights reserved.
         </div>
     )
 }
 
 export async function Footer() {
-    const collections = await getTopCollections();
+    let collections: Awaited<ReturnType<typeof getTopCollections>> = [];
+    try {
+        collections = await getTopCollections();
+    } catch {
+        // API unreachable at build time or runtime — render without categories
+    }
+    const storeName = (await getStoreName()) || 'Store';
 
     return (
         <footer className="border-t border-border mt-auto">
@@ -20,7 +27,7 @@ export async function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div>
                         <p className="text-sm font-semibold mb-4 uppercase tracking-wider">
-                            {SITE_NAME}
+                            {storeName}
                         </p>
                     </div>
 

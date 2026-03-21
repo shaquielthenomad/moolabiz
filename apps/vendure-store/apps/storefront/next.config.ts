@@ -2,7 +2,9 @@ import {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
     output: 'standalone',
-    cacheComponents: true,
+    // Disabled: cacheComponents prevents dynamic headers() from being read
+    // in server components, causing merchant store names to show as defaults.
+    // cacheComponents: true,
     images: {
         // This is necessary to display images from your local Vendure instance
         dangerouslyAllowLocalIP: true,

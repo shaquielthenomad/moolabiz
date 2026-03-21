@@ -7,7 +7,12 @@ import {
 import {NavbarLink} from '@/components/layout/navbar/navbar-link';
 
 export async function NavbarCollections() {
-    const collections = await getTopCollections();
+    let collections: Awaited<ReturnType<typeof getTopCollections>> = [];
+    try {
+        collections = await getTopCollections();
+    } catch {
+        // API unreachable at build time — render without collections
+    }
 
     return (
         <NavigationMenu>
