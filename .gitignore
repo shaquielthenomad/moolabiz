@@ -1,8 +1,10 @@
 node_modules/
 .next/
+.cursor/
 .env
 .env.local
 *.log
+apps/vendure-store/apps/server/vendure.sqlite
 .DS_Store
 dist/
 .turbo/
