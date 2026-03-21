@@ -135,6 +135,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
+    // Verify the product exists in the merchant's channel before deleting
+    const check = await vendureAdminQuery<{
+      product: { id: string } | null;
+    }>(auth.vendureChannelToken, GET_PRODUCT_QUERY, { id });
+
+    if (!check.product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
     const data = await vendureAdminQuery<{
       deleteProduct: { result: string; message?: string };
     }>(auth.vendureChannelToken, DELETE_PRODUCT_MUTATION, { id });

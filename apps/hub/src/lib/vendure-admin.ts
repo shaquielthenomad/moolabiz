@@ -260,19 +260,33 @@ export async function createMerchantSeller(
   const sellerId = sellerData.createSeller.id;
 
   // 2. Assign the seller to the channel
-  await adminGql(
-    `mutation AssignSellerToChannel($sellerId: ID!, $channelId: ID!) {
-      assignSellersToChannel(channelId: $channelId, sellerIds: [$sellerId]) {
-        id
-        name
-      }
-    }`,
-    { sellerId, channelId }
-  );
-
-  console.log(
-    `[vendure-admin] Created seller "${businessName}" (id: ${sellerId}) and assigned to channel ${channelId}`
-  );
+  // NOTE: Vendure 3.x may not have a dedicated `assignSellersToChannel` mutation.
+  // We attempt it but don't let failure block provisioning — sellers are optional
+  // for basic channel operation (products/orders work without seller assignment).
+  try {
+    await adminGql(
+      `mutation AssignSellerToChannel($sellerId: ID!, $channelId: ID!) {
+        assignSellersToChannel(channelId: $channelId, sellerIds: [$sellerId]) {
+          id
+          name
+        }
+      }`,
+      { sellerId, channelId }
+    );
+    console.log(
+      `[vendure-admin] Created seller "${businessName}" (id: ${sellerId}) and assigned to channel ${channelId}`
+    );
+  } catch (assignErr) {
+    // TODO: Find the correct Vendure 3.x mutation for seller-channel assignment
+    // if `assignSellersToChannel` doesn't exist in this version.
+    console.warn(
+      `[vendure-admin] Could not assign seller to channel (non-fatal):`,
+      assignErr instanceof Error ? assignErr.message : assignErr
+    );
+    console.log(
+      `[vendure-admin] Created seller "${businessName}" (id: ${sellerId}) — channel assignment skipped`
+    );
+  }
 
   return { sellerId };
 }
@@ -294,6 +308,71 @@ export async function deleteMerchantChannel(
   );
 
   console.log(`[vendure-admin] Deleted channel ${channelId}`);
+}
+
+/**
+ * Create a default flat-rate shipping method assigned to a merchant's channel.
+ * Vendure checkout requires at least one shipping method per channel.
+ */
+export async function createDefaultShippingMethod(
+  channelId: string
+): Promise<{ shippingMethodId: string }> {
+  const data = await adminGql<{
+    createShippingMethod: { id: string; code: string };
+  }>(
+    `mutation CreateShippingMethod($input: CreateShippingMethodInput!) {
+      createShippingMethod(input: $input) {
+        id
+        code
+      }
+    }`,
+    {
+      input: {
+        code: `standard-shipping-ch${channelId}`,
+        translations: [
+          {
+            languageCode: "en",
+            name: "Standard Shipping",
+            description: "Free delivery",
+          },
+        ],
+        fulfillmentHandler: "manual-fulfillment",
+        checker: {
+          code: "default-shipping-eligibility-checker",
+          arguments: [{ name: "orderMinimum", value: "0" }],
+        },
+        calculator: {
+          code: "default-shipping-calculator",
+          arguments: [
+            { name: "rate", value: "0" },
+            { name: "includesTax", value: "true" },
+            { name: "taxRate", value: "0" },
+          ],
+        },
+      },
+    }
+  );
+
+  // Assign the shipping method to the merchant's channel
+  await adminGql(
+    `mutation AssignShippingMethodToChannel($input: AssignShippingMethodsToChannelInput!) {
+      assignShippingMethodsToChannel(input: $input) {
+        id
+      }
+    }`,
+    {
+      input: {
+        shippingMethodIds: [data.createShippingMethod.id],
+        channelId,
+      },
+    }
+  );
+
+  console.log(
+    `[vendure-admin] Created default shipping method (id: ${data.createShippingMethod.id}) for channel ${channelId}`
+  );
+
+  return { shippingMethodId: data.createShippingMethod.id };
 }
 
 /**

@@ -13,6 +13,7 @@ import { deployOpenClaw } from "@/lib/openclaw";
 import {
   createMerchantChannel,
   createMerchantSeller,
+  createDefaultShippingMethod,
   deleteMerchantChannel,
 } from "@/lib/vendure-admin";
 import { sendWelcomeEmail } from "@/lib/email";
@@ -77,6 +78,9 @@ export async function provisionMerchant(
 
       // Create a seller and assign to the channel
       await createMerchantSeller(vendureChannelId, businessName);
+
+      // Create a default shipping method for checkout to work
+      await createDefaultShippingMethod(vendureChannelId);
 
       // Store Vendure channel info immediately
       await db
@@ -151,10 +155,17 @@ export async function provisionMerchant(
 
     // Reset status to pending so merchant can retry
     if (createdNewChannel || !existingVendureChannelId) {
-      await db
-        .update(merchants)
-        .set({ status: "pending", updatedAt: new Date() })
-        .where(eq(merchants.id, merchantId));
+      try {
+        await db
+          .update(merchants)
+          .set({ status: "pending", updatedAt: new Date() })
+          .where(eq(merchants.id, merchantId));
+      } catch (rollbackErr) {
+        console.error(
+          "[provision] Failed to reset merchant status to pending:",
+          rollbackErr
+        );
+      }
     }
 
     return {

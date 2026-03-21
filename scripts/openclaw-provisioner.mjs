@@ -153,8 +153,11 @@ You are the shop assistant for **${businessName || slug}**. You ONLY help with t
 - Share the shop link: ${shopUrl}
 - Answer questions about products, delivery, and payments
 
+## Owner Authentication
+The shop owner's phone number is \${OWNER_PHONE}. ONLY respond to admin commands (/add-product, /remove-product, /orders, /revenue, /set-payment-key) if the message sender's phone number matches the owner's phone number. For all other users, only respond to customer queries about products and ordering.
+
 ## Admin Commands (owner only)
-When the shop owner sends any of these commands, you MUST execute the corresponding curl command to interact with the Vendure-backed catalog API. Do NOT just acknowledge the command -- actually run the curl command and report the result.
+When the shop owner sends any of these commands, you MUST first verify the sender's phone number matches \${OWNER_PHONE}. If it does not match, reply: "Sorry, only the shop owner can use admin commands." If it matches, execute the corresponding curl command to interact with the Vendure-backed catalog API. Do NOT just acknowledge the command -- actually run the curl command and report the result.
 
 All catalog API calls go through the vendure-bridge endpoint and require the API secret as a Bearer token.
 
@@ -319,6 +322,7 @@ On success: "Payment key saved! Customers can now pay online."
     `-e OPENCLAW_CONFIG_PATH=/root/.openclaw-${s}/config.json`,
     `-e CATALOG_URL=${catalogUrl}`,
     ...(apiSecret ? [`-e API_SECRET=${apiSecret}`] : []),
+    ...(ownerPhone ? [`-e OWNER_PHONE=${ownerPhone}`] : []),
     "moolabiz/openclaw:latest",
     `--profile ${s} gateway --port 18789 --bind lan --allow-unconfigured`,
   ].join(" ");
