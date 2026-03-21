@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   const url = new URL(request.url);
   const take = Math.min(Number(url.searchParams.get("take")) || 100, 250);
-  const skip = Number(url.searchParams.get("skip")) || 0;
+  const skip = Math.min(Number(url.searchParams.get("skip")) || 0, 10000);
 
   try {
     const data = await vendureAdminQuery<{

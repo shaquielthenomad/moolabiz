@@ -39,11 +39,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, duplicate: true });
     }
 
+    // Store only essential fields — never persist full payload which may contain PII
+    const safePayload = JSON.stringify({
+      id: event.id,
+      type: event.type,
+      created: event.created,
+      livemode: event.livemode,
+    });
+
     // Store the event
     await db.insert(webhookEvents).values({
       eventType,
       eventId,
-      payload: rawBody,
+      payload: safePayload,
       processed: false,
     });
 

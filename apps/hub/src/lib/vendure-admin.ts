@@ -5,6 +5,8 @@
  * Authenticates as superadmin and caches the auth token in memory.
  */
 
+import crypto from "node:crypto";
+
 const VENDURE_ADMIN_API_URL =
   process.env.VENDURE_ADMIN_API_URL || "http://localhost:3000/admin-api";
 
@@ -162,14 +164,7 @@ export async function adminGql<T = unknown>(
 // ─── Channel management ─────────────────────────────────────────────
 
 function generateChannelToken(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let token = "";
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  for (const b of bytes) {
-    token += chars[b % chars.length];
-  }
-  return token;
+  return crypto.randomBytes(32).toString("hex");
 }
 
 interface CreateChannelResult {

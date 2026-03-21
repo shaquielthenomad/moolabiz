@@ -840,7 +840,7 @@ function PlanPicker({
                   <span>
                     {f}
                     {COMING_SOON_FEATURES.has(f) && (
-                      <span className="ml-1 text-xs text-slate-400 font-normal">(Coming soon)</span>
+                      <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Coming soon</span>
                     )}
                   </span>
                 </li>

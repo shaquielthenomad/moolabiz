@@ -88,7 +88,7 @@ export async function Footer() {
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>
                                 <a
-                                    href="https://wa.me/27000000000"
+                                    href="https://wa.me/27614687087"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="hover:text-foreground transition-colors"
