@@ -21,6 +21,7 @@ function getVendureCredentials(): { username: string; password: string } {
 
 let cachedAuthToken: string | null = null;
 let tokenExpiresAt = 0;
+let pendingAuth: Promise<string> | null = null;
 
 // Token is cached for 55 minutes (Vendure default session is 1 hour)
 const TOKEN_TTL_MS = 55 * 60 * 1000;
@@ -78,11 +79,17 @@ async function authenticate(): Promise<string> {
   if (cachedAuthToken && Date.now() < tokenExpiresAt) {
     return cachedAuthToken;
   }
-
-  cachedAuthToken = await loginAndGetToken();
-  tokenExpiresAt = Date.now() + TOKEN_TTL_MS;
-
-  return cachedAuthToken;
+  if (pendingAuth) return pendingAuth;
+  pendingAuth = loginAndGetToken().then(token => {
+    cachedAuthToken = token;
+    tokenExpiresAt = Date.now() + TOKEN_TTL_MS;
+    pendingAuth = null;
+    return token;
+  }).catch(err => {
+    pendingAuth = null;
+    throw err;
+  });
+  return pendingAuth;
 }
 
 async function loginAndGetToken(): Promise<string> {
@@ -176,7 +183,6 @@ interface CreateChannelResult {
  */
 export async function createMerchantChannel(
   slug: string,
-  businessName: string,
   currencyCode: string = "ZAR"
 ): Promise<CreateChannelResult> {
   const channelToken = generateChannelToken();

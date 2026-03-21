@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { merchants } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { getMerchantFromSession, isDashboardAuthError } from "../_auth";
 import {
   vendureAdminQuery,
   LIST_ORDERS_QUERY,
@@ -16,28 +13,15 @@ import {
  * Uses session cookie auth (not Bearer token).
  */
 export async function GET() {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const auth = await getMerchantFromSession();
+  if (isDashboardAuthError(auth)) return auth;
 
-  const [merchant] = await db
-    .select()
-    .from(merchants)
-    .where(eq(merchants.id, session.merchantId))
-    .limit(1);
-
-  if (!merchant || !merchant.vendureChannelToken) {
-    return NextResponse.json(
-      { error: "Store is not yet connected" },
-      { status: 503 }
-    );
-  }
+  const { vendureChannelToken } = auth;
 
   try {
     const data = await vendureAdminQuery<{
       orders: { totalItems: number; items: unknown[] };
-    }>(merchant.vendureChannelToken, LIST_ORDERS_QUERY, {
+    }>(vendureChannelToken, LIST_ORDERS_QUERY, {
       options: { take: 250, skip: 0, sort: { createdAt: "DESC" } },
     });
 

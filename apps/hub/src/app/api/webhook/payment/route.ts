@@ -5,6 +5,7 @@ import { merchants, webhookEvents } from "@/lib/db/schema";
 import { constructWebhookEvent } from "@/lib/stripe";
 import { stopOpenClaw, startOpenClaw } from "@/lib/openclaw";
 import { provisionMerchant } from "@/lib/provisioning";
+import { MERCHANT_STATUS } from "@/lib/constants";
 
 export async function POST(request: Request) {
   try {
@@ -91,7 +92,7 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
     return;
   }
 
-  if (merchant.status === "active" || merchant.status === "provisioning") {
+  if (merchant.status === MERCHANT_STATUS.ACTIVE || merchant.status === MERCHANT_STATUS.PROVISIONING) {
     console.log("[stripe] Merchant already active/provisioning:", merchantId);
     return;
   }
@@ -99,11 +100,11 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
   // Atomic status transition
   const updated = await db.update(merchants)
     .set({
-      status: "provisioning",
+      status: MERCHANT_STATUS.PROVISIONING,
       subscriptionId: subscriptionId || null,
       updatedAt: new Date(),
     })
-    .where(and(eq(merchants.id, merchantId), eq(merchants.status, "pending")))
+    .where(and(eq(merchants.id, merchantId), eq(merchants.status, MERCHANT_STATUS.PENDING)))
     .returning();
 
   if (updated.length === 0) {
@@ -153,7 +154,7 @@ async function handleSubscriptionCancelled(subscription: Record<string, unknown>
     console.error("[stripe] Failed to stop OpenClaw:", err);
   }
 
-  await db.update(merchants).set({ status: "cancelled", updatedAt: new Date() })
+  await db.update(merchants).set({ status: MERCHANT_STATUS.CANCELLED, updatedAt: new Date() })
     .where(eq(merchants.id, merchant.id));
   await db.update(webhookEvents).set({ merchantId: merchant.id })
     .where(eq(webhookEvents.eventId, eventId));
@@ -176,7 +177,7 @@ async function handlePaymentFailed(invoice: Record<string, unknown>, eventId: st
     console.error("[stripe] Failed to stop OpenClaw:", err);
   }
 
-  await db.update(merchants).set({ status: "suspended", updatedAt: new Date() })
+  await db.update(merchants).set({ status: MERCHANT_STATUS.SUSPENDED, updatedAt: new Date() })
     .where(eq(merchants.id, merchant.id));
   await db.update(webhookEvents).set({ merchantId: merchant.id })
     .where(eq(webhookEvents.eventId, eventId));
@@ -194,13 +195,13 @@ async function handleSubscriptionUpdated(subscription: Record<string, unknown>, 
   if (!merchant) return;
 
   // If subscription becomes active again (e.g. payment retry succeeded)
-  if (status === "active" && merchant.status === "suspended") {
+  if (status === MERCHANT_STATUS.ACTIVE && merchant.status === MERCHANT_STATUS.SUSPENDED) {
     console.log(`[stripe] Reactivating bot for ${merchant.businessName}`);
     // Restart OpenClaw container
     try { await startOpenClaw(merchant.slug); } catch (err) {
       console.error("[stripe] Failed to start OpenClaw:", err);
     }
-    await db.update(merchants).set({ status: "active", updatedAt: new Date() })
+    await db.update(merchants).set({ status: MERCHANT_STATUS.ACTIVE, updatedAt: new Date() })
       .where(eq(merchants.id, merchant.id));
   }
 

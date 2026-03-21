@@ -19,6 +19,7 @@ import {
 } from "@/lib/vendure-admin";
 import { sendWelcomeEmail } from "@/lib/email";
 import { getPlan } from "@/lib/plans";
+import { MERCHANT_STATUS } from "@/lib/constants";
 
 export interface ProvisionMerchantInput {
   merchantId: string;
@@ -72,7 +73,7 @@ export async function provisionMerchant(
   try {
     // 1. Create Vendure channel (skip if already exists from previous attempt)
     if (!vendureChannelId || !channelToken) {
-      const channel = await createMerchantChannel(slug, businessName);
+      const channel = await createMerchantChannel(slug);
       vendureChannelId = channel.channelId;
       channelToken = channel.channelToken;
       createdNewChannel = true;
@@ -126,7 +127,7 @@ export async function provisionMerchant(
     // 4. Update merchant status to active
     await db
       .update(merchants)
-      .set({ status: "active", openclawContainerId, updatedAt: new Date() })
+      .set({ status: MERCHANT_STATUS.ACTIVE, openclawContainerId, updatedAt: new Date() })
       .where(eq(merchants.id, merchantId));
 
     // 5. Send welcome email
@@ -162,7 +163,7 @@ export async function provisionMerchant(
       try {
         await db
           .update(merchants)
-          .set({ status: "pending", updatedAt: new Date() })
+          .set({ status: MERCHANT_STATUS.PENDING, updatedAt: new Date() })
           .where(eq(merchants.id, merchantId));
       } catch (rollbackErr) {
         console.error(

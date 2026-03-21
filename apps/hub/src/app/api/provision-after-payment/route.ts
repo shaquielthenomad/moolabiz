@@ -5,6 +5,7 @@ import { merchants } from "@/lib/db/schema";
 import { createSessionToken } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { provisionMerchant } from "@/lib/provisioning";
+import { MERCHANT_STATUS } from "@/lib/constants";
 
 const SESSION_COOKIE_NAME = "moolabiz_session";
 
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Could not verify payment" }, { status: 402 });
     }
 
-    if (merchant.status === "active") {
+    if (merchant.status === MERCHANT_STATUS.ACTIVE) {
       return jsonWithSession(
         {
           success: true,
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (merchant.status === "provisioning") {
+    if (merchant.status === MERCHANT_STATUS.PROVISIONING) {
       return jsonWithSession(
         {
           success: true,
@@ -104,8 +105,8 @@ export async function POST(request: Request) {
     // Atomic status transition
     const updated = await db
       .update(merchants)
-      .set({ status: "provisioning", updatedAt: new Date() })
-      .where(and(eq(merchants.id, merchant.id), eq(merchants.status, "pending")))
+      .set({ status: MERCHANT_STATUS.PROVISIONING, updatedAt: new Date() })
+      .where(and(eq(merchants.id, merchant.id), eq(merchants.status, MERCHANT_STATUS.PENDING)))
       .returning();
 
     if (updated.length === 0) {
@@ -123,9 +124,6 @@ export async function POST(request: Request) {
 
     console.log(`[provision] Provisioning bot for ${merchant.businessName} (${slug})`);
 
-    // Re-read merchant to get latest state (may have been updated by webhook)
-    const [freshMerchant] = await db.select().from(merchants).where(eq(merchants.id, merchant.id)).limit(1);
-
     const result = await provisionMerchant({
       merchantId: merchant.id,
       slug,
@@ -134,8 +132,8 @@ export async function POST(request: Request) {
       paymentProvider: merchant.paymentProvider,
       plan: merchant.plan,
       email: merchant.email,
-      existingVendureChannelId: freshMerchant?.vendureChannelId,
-      existingVendureChannelToken: freshMerchant?.vendureChannelToken,
+      existingVendureChannelId: updated[0].vendureChannelId,
+      existingVendureChannelToken: updated[0].vendureChannelToken,
     });
 
     if (result.success) {

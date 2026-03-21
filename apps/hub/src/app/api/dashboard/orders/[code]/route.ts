@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { merchants } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { getMerchantFromSession, isDashboardAuthError } from "../../_auth";
 import {
   vendureAdminQuery,
   LIST_ORDERS_QUERY,
@@ -27,25 +24,11 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
 ) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const auth = await getMerchantFromSession();
+  if (isDashboardAuthError(auth)) return auth;
 
+  const { vendureChannelToken } = auth;
   const { code } = await params;
-
-  const [merchant] = await db
-    .select()
-    .from(merchants)
-    .where(eq(merchants.id, session.merchantId))
-    .limit(1);
-
-  if (!merchant || !merchant.vendureChannelToken) {
-    return NextResponse.json(
-      { error: "Store is not yet connected" },
-      { status: 503 }
-    );
-  }
 
   let body: Record<string, unknown>;
   try {
@@ -66,7 +49,7 @@ export async function PATCH(
     // Look up the order by code within the merchant's channel
     const listData = await vendureAdminQuery<{
       orders: { items: Array<{ id: string; code: string; state: string }> };
-    }>(merchant.vendureChannelToken, LIST_ORDERS_QUERY, {
+    }>(vendureChannelToken, LIST_ORDERS_QUERY, {
       options: {
         take: 1,
         filter: { code: { eq: code } },
@@ -88,7 +71,7 @@ export async function PATCH(
         message?: string;
         transitionError?: string;
       };
-    }>(merchant.vendureChannelToken, TRANSITION_ORDER_STATE_MUTATION, {
+    }>(vendureChannelToken, TRANSITION_ORDER_STATE_MUTATION, {
       id: order.id,
       state,
     });

@@ -54,6 +54,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const hasProductUpdates = name !== undefined || description !== undefined || inStock !== undefined;
 
+    // Update variant-level fields (price, stock, sku) on the default variant
+    const { price, stockQuantity, sku } = body as {
+      price?: number;
+      stockQuantity?: number;
+      sku?: string;
+    };
+
+    const hasVariantUpdates =
+      price !== undefined || stockQuantity !== undefined || sku !== undefined || inStock !== undefined;
+
+    const updates: Promise<unknown>[] = [];
+
     if (hasProductUpdates) {
       const translations: Record<string, unknown>[] = [];
       if (name !== undefined || description !== undefined) {
@@ -67,22 +79,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (translations.length) updateInput.translations = translations;
       if (inStock !== undefined) updateInput.enabled = inStock;
 
-      await vendureAdminQuery(
-        auth.vendureChannelToken,
-        UPDATE_PRODUCT_MUTATION,
-        { input: updateInput }
+      updates.push(
+        vendureAdminQuery(
+          auth.vendureChannelToken,
+          UPDATE_PRODUCT_MUTATION,
+          { input: updateInput }
+        )
       );
     }
-
-    // Update variant-level fields (price, stock, sku) on the default variant
-    const { price, stockQuantity, sku } = body as {
-      price?: number;
-      stockQuantity?: number;
-      sku?: string;
-    };
-
-    const hasVariantUpdates =
-      price !== undefined || stockQuantity !== undefined || sku !== undefined || inStock !== undefined;
 
     if (hasVariantUpdates && current.product.variants.length > 0) {
       const variantId = current.product.variants[0].id;
@@ -101,12 +105,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         variantInput.stockOnHand = 100;
       }
 
-      await vendureAdminQuery(
-        auth.vendureChannelToken,
-        UPDATE_PRODUCT_VARIANTS_MUTATION,
-        { input: [variantInput] }
+      updates.push(
+        vendureAdminQuery(
+          auth.vendureChannelToken,
+          UPDATE_PRODUCT_VARIANTS_MUTATION,
+          { input: [variantInput] }
+        )
       );
     }
+
+    await Promise.all(updates);
 
     // Fetch updated product
     const updated = await vendureAdminQuery<{ product: unknown }>(

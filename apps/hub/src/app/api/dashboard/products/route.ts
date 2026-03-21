@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { merchants } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { getMerchantFromSession, isDashboardAuthError } from "../_auth";
 import {
   vendureAdminQuery,
   uploadAssetToVendure,
@@ -20,28 +17,15 @@ import {
  * Uses session cookie auth (not Bearer token).
  */
 export async function GET() {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const auth = await getMerchantFromSession();
+  if (isDashboardAuthError(auth)) return auth;
 
-  const [merchant] = await db
-    .select()
-    .from(merchants)
-    .where(eq(merchants.id, session.merchantId))
-    .limit(1);
-
-  if (!merchant || !merchant.vendureChannelToken) {
-    return NextResponse.json(
-      { error: "Store is not yet connected" },
-      { status: 503 }
-    );
-  }
+  const { vendureChannelToken } = auth;
 
   try {
     const data = await vendureAdminQuery<{
       products: { totalItems: number; items: unknown[] };
-    }>(merchant.vendureChannelToken, LIST_PRODUCTS_QUERY, {
+    }>(vendureChannelToken, LIST_PRODUCTS_QUERY, {
       options: { take: 250, skip: 0, sort: { createdAt: "DESC" } },
     });
 
@@ -66,23 +50,10 @@ export async function GET() {
  * FormData fields: name, price (cents), description?, category?, image? (File)
  */
 export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const auth = await getMerchantFromSession();
+  if (isDashboardAuthError(auth)) return auth;
 
-  const [merchant] = await db
-    .select()
-    .from(merchants)
-    .where(eq(merchants.id, session.merchantId))
-    .limit(1);
-
-  if (!merchant || !merchant.vendureChannelToken) {
-    return NextResponse.json(
-      { error: "Store is not yet connected" },
-      { status: 503 }
-    );
-  }
+  const { vendureChannelToken } = auth;
 
   let name: string | undefined;
   let price: number | undefined;
@@ -143,7 +114,7 @@ export async function POST(request: NextRequest) {
       try {
         const buffer = Buffer.from(await imageFile.arrayBuffer());
         const result = await uploadAssetToVendure(
-          merchant.vendureChannelToken,
+          vendureChannelToken,
           buffer,
           imageFile.name || `${slug}.jpg`,
           imageFile.type || "image/jpeg"
@@ -173,14 +144,14 @@ export async function POST(request: NextRequest) {
 
     const productData = await vendureAdminQuery<{
       createProduct: { id: string };
-    }>(merchant.vendureChannelToken, CREATE_PRODUCT_MUTATION, {
+    }>(vendureChannelToken, CREATE_PRODUCT_MUTATION, {
       input: productInput,
     });
 
     const productId = productData.createProduct.id;
 
     await vendureAdminQuery(
-      merchant.vendureChannelToken,
+      vendureChannelToken,
       CREATE_PRODUCT_VARIANTS_MUTATION,
       {
         input: [
@@ -197,7 +168,7 @@ export async function POST(request: NextRequest) {
     );
 
     const full = await vendureAdminQuery<{ product: unknown }>(
-      merchant.vendureChannelToken,
+      vendureChannelToken,
       GET_PRODUCT_QUERY,
       { id: productId }
     );

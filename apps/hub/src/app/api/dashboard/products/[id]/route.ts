@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { merchants } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { getMerchantFromSession, isDashboardAuthError } from "../../_auth";
 import {
   vendureAdminQuery,
   uploadAssetToVendure,
@@ -15,20 +12,6 @@ import {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-async function getMerchantChannel() {
-  const session = await getSession();
-  if (!session) return null;
-
-  const [merchant] = await db
-    .select()
-    .from(merchants)
-    .where(eq(merchants.id, session.merchantId))
-    .limit(1);
-
-  if (!merchant?.vendureChannelToken) return null;
-  return merchant;
-}
-
 /**
  * PATCH /api/dashboard/products/:id
  *
@@ -36,10 +19,10 @@ async function getMerchantChannel() {
  * Body may contain: { name?, price?, description?, category?, inStock? }
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const merchant = await getMerchantChannel();
-  if (!merchant) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const auth = await getMerchantFromSession();
+  if (isDashboardAuthError(auth)) return auth;
+
+  const { vendureChannelToken } = auth;
 
   const { id } = await context.params;
 
@@ -92,7 +75,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const current = await vendureAdminQuery<{
       product: { id: string; variants: Array<{ id: string }> } | null;
-    }>(merchant.vendureChannelToken!, GET_PRODUCT_QUERY, { id });
+    }>(vendureChannelToken, GET_PRODUCT_QUERY, { id });
 
     if (!current.product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -110,7 +93,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       try {
         const buffer = Buffer.from(await imageFile.arrayBuffer());
         const result = await uploadAssetToVendure(
-          merchant.vendureChannelToken!,
+          vendureChannelToken,
           buffer,
           imageFile.name || `product-${id}.jpg`,
           imageFile.type || "image/jpeg"
@@ -124,6 +107,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     // Update product-level fields
     const hasProductUpdates =
       name !== undefined || description !== undefined || inStock !== undefined || featuredAssetId;
+
+    // Update variant-level fields
+    const hasVariantUpdates =
+      price !== undefined || inStock !== undefined || sku !== undefined || stockQuantity !== undefined;
+
+    const updates: Promise<unknown>[] = [];
 
     if (hasProductUpdates) {
       const translations: Record<string, unknown>[] = [];
@@ -142,16 +131,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         updateInput.assetIds = [featuredAssetId];
       }
 
-      await vendureAdminQuery(
-        merchant.vendureChannelToken!,
-        UPDATE_PRODUCT_MUTATION,
-        { input: updateInput }
+      updates.push(
+        vendureAdminQuery(
+          vendureChannelToken,
+          UPDATE_PRODUCT_MUTATION,
+          { input: updateInput }
+        )
       );
     }
-
-    // Update variant-level fields
-    const hasVariantUpdates =
-      price !== undefined || inStock !== undefined || sku !== undefined || stockQuantity !== undefined;
 
     if (hasVariantUpdates && current.product.variants.length > 0) {
       const variantId = current.product.variants[0].id;
@@ -163,16 +150,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (inStock === false && stockQuantity === undefined) variantInput.stockOnHand = 0;
       if (inStock === true && stockQuantity === undefined) variantInput.stockOnHand = 100;
 
-      await vendureAdminQuery(
-        merchant.vendureChannelToken!,
-        UPDATE_PRODUCT_VARIANTS_MUTATION,
-        { input: [variantInput] }
+      updates.push(
+        vendureAdminQuery(
+          vendureChannelToken,
+          UPDATE_PRODUCT_VARIANTS_MUTATION,
+          { input: [variantInput] }
+        )
       );
     }
 
+    await Promise.all(updates);
+
     // Fetch updated product
     const updated = await vendureAdminQuery<{ product: unknown }>(
-      merchant.vendureChannelToken!,
+      vendureChannelToken,
       GET_PRODUCT_QUERY,
       { id }
     );
@@ -193,10 +184,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  * DELETE /api/dashboard/products/:id
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
-  const merchant = await getMerchantChannel();
-  if (!merchant) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const auth = await getMerchantFromSession();
+  if (isDashboardAuthError(auth)) return auth;
+
+  const { vendureChannelToken } = auth;
 
   const { id } = await context.params;
 
@@ -204,7 +195,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     // Verify the product exists in the merchant's channel before deleting
     const check = await vendureAdminQuery<{
       product: { id: string } | null;
-    }>(merchant.vendureChannelToken!, GET_PRODUCT_QUERY, { id });
+    }>(vendureChannelToken, GET_PRODUCT_QUERY, { id });
 
     if (!check.product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -212,7 +203,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     const data = await vendureAdminQuery<{
       deleteProduct: { result: string; message?: string };
-    }>(merchant.vendureChannelToken!, DELETE_PRODUCT_MUTATION, { id });
+    }>(vendureChannelToken, DELETE_PRODUCT_MUTATION, { id });
 
     if (data.deleteProduct.result === "DELETED") {
       return NextResponse.json({ success: true });
