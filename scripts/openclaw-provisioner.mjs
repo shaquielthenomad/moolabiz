@@ -36,8 +36,20 @@ function execAsync(cmd, timeoutMs = 12000) {
   });
 }
 
-const AUTH_KEY = process.env.PROVISIONER_KEY || "moolabiz-provision-key";
+const AUTH_KEY = process.env.PROVISIONER_KEY;
+if (!AUTH_KEY) {
+  console.error("[openclaw-provisioner] PROVISIONER_KEY env var is required");
+  process.exit(1);
+}
 const PORT = 9999;
+
+/**
+ * Simple in-memory cache: slug → { connected: bool, expiresAt: ms }
+ * When a slug is confirmed connected we cache it for 2 minutes so
+ * the 5s poll from the onboard page doesn't hammer `channels list`.
+ * When confirmed NOT connected we cache for 30s.
+ */
+const connectedCache = new Map();
 
 /** Read full request body as a string. */
 function readBody(req) {
@@ -64,14 +76,14 @@ function json(res, status, data) {
 
 async function handleDeploy(req, res) {
   const body = await readBody(req);
-  const { slug, businessName, ownerPhone, apiSecret } = JSON.parse(body);
+  const { slug, businessName, ownerPhone, apiSecret, vendureChannelToken } = JSON.parse(body);
   const s = safeSlug(slug);
 
   if (!s) {
     return json(res, 400, { error: "Invalid slug" });
   }
 
-  const catalogUrl = `https://${s}.bot.moolabiz.shop`;
+  const catalogUrl = `https://moolabiz.shop/api/vendure-bridge`;
 
   // 1. Create config directory + file
   const configDir = `/data/openclaw/${s}`;
@@ -114,13 +126,15 @@ async function handleDeploy(req, res) {
   const workspaceDir = `${configDir}/workspace`;
   fs.mkdirSync(workspaceDir, { recursive: true });
 
+  const shopUrl = `https://moolabiz.shop/shop/${s}`;
+
   const soulMd = `# ${businessName || slug} -- WhatsApp Shop Assistant
 
 You are the shop assistant for **${businessName || slug}**. You ONLY help with this shop.
 
 ## Your Identity
 - You are ${businessName || slug}'s shop assistant
-- Shop URL: ${catalogUrl}
+- Shop URL: ${shopUrl}
 - You are powered by MoolaBiz
 
 ## STRICT RULES -- NEVER BREAK THESE
@@ -136,53 +150,55 @@ You are the shop assistant for **${businessName || slug}**. You ONLY help with t
 - Greet customers warmly
 - Show products and prices from the catalog
 - Help customers place orders
-- Share the shop link: ${catalogUrl}
+- Share the shop link: ${shopUrl}
 - Answer questions about products, delivery, and payments
 
 ## Admin Commands (owner only)
-When the shop owner sends any of these commands, you MUST execute the corresponding curl command to interact with the real catalog API. Do NOT just acknowledge the command -- actually run the curl command and report the result.
+When the shop owner sends any of these commands, you MUST execute the corresponding curl command to interact with the Vendure-backed catalog API. Do NOT just acknowledge the command -- actually run the curl command and report the result.
+
+All catalog API calls go through the vendure-bridge endpoint and require the API secret as a Bearer token.
 
 ### /add-product [name] R[price]
 Parse the product name and price. Convert Rand to cents (R45 = 4500, R99.50 = 9950).
 Execute:
 \`\`\`bash
-curl -s -X POST "\${CATALOG_URL}/api/products" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"name":"THE_NAME","price":CENTS,"category":"General"}'
+curl -s -X POST "\${CATALOG_URL}/products" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"name":"THE_NAME","price":CENTS,"category":"General"}'
 \`\`\`
 Then confirm: "Added [name] at R[price] to your catalog!"
 
 ### /remove-product [name]
 First find the product ID:
 \`\`\`bash
-curl -s "\${CATALOG_URL}/api/products"
+curl -s "\${CATALOG_URL}/products" -H "Authorization: Bearer \${API_SECRET}"
 \`\`\`
 Then delete it:
 \`\`\`bash
-curl -s -X DELETE "\${CATALOG_URL}/api/products/THE_ID" -H "Authorization: Bearer \${API_SECRET}"
+curl -s -X DELETE "\${CATALOG_URL}/products/THE_ID" -H "Authorization: Bearer \${API_SECRET}"
 \`\`\`
 Confirm: "Removed [name] from your catalog."
 
 ### /list-products or /products
 \`\`\`bash
-curl -s "\${CATALOG_URL}/api/products"
+curl -s "\${CATALOG_URL}/products" -H "Authorization: Bearer \${API_SECRET}"
 \`\`\`
 Format the response as a clean list with names and prices in Rand.
 
 ### /orders
 \`\`\`bash
-curl -s "\${CATALOG_URL}/api/orders" -H "Authorization: Bearer \${API_SECRET}"
+curl -s "\${CATALOG_URL}/orders" -H "Authorization: Bearer \${API_SECRET}"
 \`\`\`
 Format orders with customer name, items, and total.
 
 ### /set-payment-key [key]
 \`\`\`bash
-curl -s -X POST "\${CATALOG_URL}/api/settings" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"yocoPublicKey":"THE_KEY"}'
+curl -s -X POST "\${CATALOG_URL}/settings" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"yocoPublicKey":"KEY_VALUE"}'
 \`\`\`
 Confirm: "Payment key saved! Customers can now pay online."
 
 ## Showing Products to Customers
 When ANY user asks about products, what you sell, your menu, etc., fetch the real catalog:
 \`\`\`bash
-curl -s "\${CATALOG_URL}/api/products"
+curl -s "\${CATALOG_URL}/products" -H "Authorization: Bearer \${API_SECRET}"
 \`\`\`
 Then show them the products with prices in a friendly format.
 
@@ -197,18 +213,18 @@ Respond in the customer's language. Supported: English, Zulu, Xhosa, Afrikaans, 
   fs.mkdirSync(skillDir, { recursive: true });
   fs.writeFileSync(`${skillDir}/SKILL.md`, `---
 name: moolabiz-catalog
-description: "Manage the MoolaBiz web catalog: add/remove products, list products, view orders, and configure payment settings. Use when the merchant (owner) sends admin commands like /add-product, /remove-product, /list-products, /orders, or /set-payment-key. Also use when the owner asks in natural language to add, remove, or list products, view orders, or set up payments."
+description: "Manage the MoolaBiz web catalog via Vendure: add/remove products, list products, view orders, and configure payment settings. Use when the merchant (owner) sends admin commands like /add-product, /remove-product, /list-products, /orders, or /set-payment-key. Also use when the owner asks in natural language to add, remove, or list products, view orders, or set up payments."
 metadata: { "openclaw": { "emoji": "\\uD83D\\uDED2", "requires": { "bins": ["curl"], "env": ["CATALOG_URL", "API_SECRET"] } } }
 ---
 
 # MoolaBiz Catalog Skill
 
-Manage the merchants web catalog via the catalog REST API.
+Manage the merchant's web catalog via the Vendure-backed bridge API.
 
 ## Environment
 
-- \`CATALOG_URL\` -- e.g. \`${catalogUrl}\`
-- \`API_SECRET\` -- Bearer token for writes
+- \`CATALOG_URL\` -- e.g. \`${catalogUrl}\` (the vendure-bridge endpoint)
+- \`API_SECRET\` -- Bearer token for merchant authentication
 
 ## Commands
 
@@ -217,7 +233,7 @@ Manage the merchants web catalog via the catalog REST API.
 Parse name and price. Convert Rand to cents: R45 = 4500, R99.50 = 9950.
 
 \`\`\`bash
-curl -s -X POST "\${CATALOG_URL}/api/products" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"name":"PRODUCT_NAME","price":PRICE_IN_CENTS,"category":"General"}'
+curl -s -X POST "\${CATALOG_URL}/products" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"name":"PRODUCT_NAME","price":PRICE_IN_CENTS,"category":"General"}'
 \`\`\`
 
 On success: "Added [name] at R[price] to your catalog!"
@@ -227,8 +243,8 @@ On success: "Added [name] at R[price] to your catalog!"
 First list products to find the ID, then delete:
 
 \`\`\`bash
-curl -s "\${CATALOG_URL}/api/products"
-curl -s -X DELETE "\${CATALOG_URL}/api/products/PRODUCT_ID" -H "Authorization: Bearer \${API_SECRET}"
+curl -s "\${CATALOG_URL}/products" -H "Authorization: Bearer \${API_SECRET}"
+curl -s -X DELETE "\${CATALOG_URL}/products/PRODUCT_ID" -H "Authorization: Bearer \${API_SECRET}"
 \`\`\`
 
 On success: "Removed [name] from your catalog."
@@ -236,7 +252,7 @@ On success: "Removed [name] from your catalog."
 ### /list-products or /products
 
 \`\`\`bash
-curl -s "\${CATALOG_URL}/api/products"
+curl -s "\${CATALOG_URL}/products" -H "Authorization: Bearer \${API_SECRET}"
 \`\`\`
 
 Format as a readable list with names and prices in Rand.
@@ -244,7 +260,7 @@ Format as a readable list with names and prices in Rand.
 ### /orders
 
 \`\`\`bash
-curl -s "\${CATALOG_URL}/api/orders" -H "Authorization: Bearer \${API_SECRET}"
+curl -s "\${CATALOG_URL}/orders" -H "Authorization: Bearer \${API_SECRET}"
 \`\`\`
 
 Format orders with customer name, items, total.
@@ -252,7 +268,7 @@ Format orders with customer name, items, total.
 ### /set-payment-key [key]
 
 \`\`\`bash
-curl -s -X POST "\${CATALOG_URL}/api/settings" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"yocoPublicKey":"KEY_VALUE"}'
+curl -s -X POST "\${CATALOG_URL}/settings" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"yocoPublicKey":"KEY_VALUE"}'
 \`\`\`
 
 On success: "Payment key saved! Customers can now pay online."
@@ -313,20 +329,14 @@ On success: "Payment key saved! Customers can now pay online."
   // Auto-trigger WhatsApp channel login after a brief startup delay
   // This primes the QR code so it's ready when the merchant visits /onboard
   setTimeout(() => {
-    try {
-      console.log(`[provisioner] triggering WhatsApp login for openclaw-${s}...`);
-      const { execFile: ef } = require("node:child_process");
-      const proc = ef(
-        "docker",
-        ["exec", `openclaw-${s}`, "openclaw", "--profile", s, "channels", "login", "--channel", "whatsapp"],
-        { timeout: 30000 },
-        () => {} // Ignore result — it times out waiting for QR scan
-      );
-      // Kill after 20s — the QR will have been generated by then
-      setTimeout(() => { try { proc.kill(); } catch {} }, 20000);
-    } catch (err) {
-      console.error(`[provisioner] auto-login trigger failed for ${s}:`, err.message);
-    }
+    console.log(`[provisioner] triggering WhatsApp login for openclaw-${s}...`);
+    const proc = exec(
+      `docker exec openclaw-${s} openclaw --profile ${s} channels login --channel whatsapp`,
+      { timeout: 25000 },
+      () => {} // Ignore result — it times out waiting for QR scan
+    );
+    // Kill after 22s — the QR will have been generated by then
+    setTimeout(() => { try { proc.kill("SIGKILL"); } catch { /* already dead */ } }, 22000);
   }, 15000); // Wait 15s for OpenClaw gateway to fully start
 
   json(res, 200, { containerId, slug: s });
@@ -375,19 +385,32 @@ async function handleQR(req, res) {
   const { slug } = JSON.parse(await readBody(req));
   const s = safeSlug(slug);
 
-  // Check if already connected (async — does NOT block event loop)
-  try {
-    const { stdout, stderr } = await execAsync(
-      `docker exec openclaw-${s} openclaw --profile ${s} channels list 2>&1`,
-      10000
-    );
-    const statusOut = stdout + stderr;
-    // Check for ACTUAL linked state — "not linked" contains "linked" so we must exclude it
-    if (statusOut.includes("linked") && !statusOut.includes("not linked")) {
-      console.log(`[provisioner] ${s}: already connected, skipping QR`);
+  // Fast path: check in-memory cache first
+  const cached = connectedCache.get(s);
+  if (cached && cached.expiresAt > Date.now()) {
+    if (cached.connected) {
       return json(res, 200, { connected: true, qr: null });
     }
-  } catch { /* not connected or container not running */ }
+    // Cache says not connected — fall through to check QR
+  } else {
+    // Check if already connected (async — does NOT block event loop)
+    try {
+      const { stdout, stderr } = await execAsync(
+        `docker exec openclaw-${s} openclaw --profile ${s} channels list 2>&1`,
+        15000
+      );
+      const statusOut = stdout + stderr;
+      // Check for ACTUAL linked state — "not linked" contains "linked" so we must exclude it
+      if (statusOut.includes("linked") && !statusOut.includes("not linked")) {
+        console.log(`[provisioner] ${s}: already connected, skipping QR`);
+        connectedCache.set(s, { connected: true, expiresAt: Date.now() + 120000 }); // 2-min cache
+        return json(res, 200, { connected: true, qr: null });
+      } else {
+        // Cache the not-connected state briefly to avoid hammering channels list
+        connectedCache.set(s, { connected: false, expiresAt: Date.now() + 30000 }); // 30s cache
+      }
+    } catch { /* not connected or container not running */ }
+  }
 
   // Run channels login with a timeout — it blocks waiting for scan
   // We capture the QR from the combined output (async — does NOT block event loop)

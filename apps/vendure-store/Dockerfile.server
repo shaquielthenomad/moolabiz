@@ -1,0 +1,17 @@
+FROM node:22-alpine
+WORKDIR /app
+
+# Copy workspace package files
+COPY package.json package-lock.json ./
+COPY apps/server/package.json ./apps/server/
+
+# Install all deps at workspace level
+RUN npm ci --workspace=apps/server 2>/dev/null || npm install --legacy-peer-deps
+
+# Copy compiled server + static assets
+COPY apps/server/dist ./apps/server/dist
+COPY apps/server/static ./apps/server/static
+
+WORKDIR /app/apps/server
+EXPOSE 3000
+CMD ["node", "dist/index.js"]

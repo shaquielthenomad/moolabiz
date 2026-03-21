@@ -10,13 +10,30 @@ interface Product {
   description: string;
   category: string;
   inStock: boolean;
+  sku?: string;
+  stockQuantity?: number;
+  variants?: Variant[];
+}
+
+interface Variant {
+  id: string;
+  name: string;
+  price: number;
+  sku: string;
+  stockOnHand: number;
+  inStock: boolean;
+  options: Record<string, string>;
 }
 
 interface MerchantInfo {
   slug: string;
   businessName: string;
-  apiSecret: string;
+  plan: string;
+  useVendure: boolean;
 }
+
+/** Plans that unlock advanced product fields (variants, SKU, stock qty) */
+const ADVANCED_PLANS = ["growth", "pro", "business"];
 
 export function ProductsClient({
   merchant,
@@ -36,7 +53,12 @@ export function ProductsClient({
   } | null>(null);
   const [loading, setLoading] = useState("");
 
-  const botApiBase = `https://${merchant.slug}.bot.moolabiz.shop/api`;
+  const showAdvanced = ADVANCED_PLANS.includes(merchant.plan);
+
+  // All API calls now go through the hub's own dashboard API routes
+  const apiBase = merchant.useVendure
+    ? "/api/dashboard/products"
+    : `https://${merchant.slug}.bot.moolabiz.shop/api/products`;
 
   function showNotif(type: "error" | "success", message: string) {
     setNotification({ type, message });
@@ -47,9 +69,8 @@ export function ProductsClient({
     if (!confirm("Delete this product?")) return;
     setLoading(productId);
     try {
-      const res = await fetch(`${botApiBase}/products/${productId}`, {
+      const res = await fetch(`${apiBase}/${productId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${merchant.apiSecret}` },
       });
       if (res.ok) {
         setProducts((prev) => prev.filter((p) => p.id !== productId));
@@ -66,12 +87,9 @@ export function ProductsClient({
   async function handleToggleStock(product: Product) {
     setLoading(product.id);
     try {
-      const res = await fetch(`${botApiBase}/products/${product.id}`, {
+      const res = await fetch(`${apiBase}/${product.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${merchant.apiSecret}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ inStock: !product.inStock }),
       });
       if (res.ok) {
@@ -153,8 +171,8 @@ export function ProductsClient({
 
             {showAddForm && (
               <AddProductForm
-                botApiBase={botApiBase}
-                apiSecret={merchant.apiSecret}
+                apiBase={apiBase}
+                showAdvanced={showAdvanced}
                 onSuccess={(product: Product) => {
                   setProducts((prev) => [product, ...prev]);
                   setShowAddForm(false);
@@ -180,10 +198,14 @@ export function ProductsClient({
                     {editingId === product.id ? (
                       <EditProductForm
                         product={product}
-                        botApiBase={botApiBase}
-                        apiSecret={merchant.apiSecret}
+                        apiBase={apiBase}
+                        showAdvanced={showAdvanced}
                         onSave={(updated) => {
-                          setProducts((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+                          setProducts((prev) =>
+                            prev.map((p) =>
+                              p.id === updated.id ? updated : p
+                            )
+                          );
                           setEditingId(null);
                           showNotif("success", "Product updated.");
                         }}
@@ -192,7 +214,10 @@ export function ProductsClient({
                       />
                     ) : (
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setEditingId(product.id)}>
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => setEditingId(product.id)}
+                        >
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-slate-900 text-sm truncate">
                               {product.name}
@@ -220,7 +245,16 @@ export function ProductsClient({
                               {product.description}
                             </p>
                           )}
-                          <p className="text-xs text-emerald-600 mt-1">Tap to edit</p>
+                          {showAdvanced &&
+                            product.variants &&
+                            product.variants.length > 1 && (
+                              <p className="text-xs text-slate-400 mt-1">
+                                {product.variants.length} variants
+                              </p>
+                            )}
+                          <p className="text-xs text-emerald-600 mt-1">
+                            Tap to edit
+                          </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button
@@ -271,14 +305,18 @@ export function ProductsClient({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Add Product Form
+// ---------------------------------------------------------------------------
+
 function AddProductForm({
-  botApiBase,
-  apiSecret,
+  apiBase,
+  showAdvanced,
   onSuccess,
   onError,
 }: {
-  botApiBase: string;
-  apiSecret: string;
+  apiBase: string;
+  showAdvanced: boolean;
   onSuccess: (product: Product) => void;
   onError: (msg: string) => void;
 }) {
@@ -286,6 +324,8 @@ function AddProductForm({
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [sku, setSku] = useState("");
+  const [stockQuantity, setStockQuantity] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
@@ -293,18 +333,22 @@ function AddProductForm({
     setSubmitting(true);
 
     try {
-      const res = await fetch(`${botApiBase}/products`, {
+      const payload: Record<string, unknown> = {
+        name,
+        price: Math.round(parseFloat(price) * 100),
+        description,
+        category,
+      };
+
+      if (showAdvanced) {
+        if (sku) payload.sku = sku;
+        if (stockQuantity) payload.stockQuantity = parseInt(stockQuantity, 10);
+      }
+
+      const res = await fetch(apiBase, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiSecret}`,
-        },
-        body: JSON.stringify({
-          name,
-          price: Math.round(parseFloat(price) * 100),
-          description,
-          category,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -314,6 +358,8 @@ function AddProductForm({
         setPrice("");
         setDescription("");
         setCategory("");
+        setSku("");
+        setStockQuantity("");
       } else {
         onError("Could not add product. Please try again.");
       }
@@ -404,6 +450,44 @@ function AddProductForm({
         />
       </div>
 
+      {showAdvanced && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+          <div>
+            <label
+              htmlFor="productSku"
+              className="block text-sm font-medium text-slate-700 mb-1"
+            >
+              SKU (optional)
+            </label>
+            <input
+              id="productSku"
+              type="text"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              placeholder="e.g. CAKE-CHOC-001"
+              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="productStock"
+              className="block text-sm font-medium text-slate-700 mb-1"
+            >
+              Stock quantity
+            </label>
+            <input
+              id="productStock"
+              type="number"
+              min="0"
+              value={stockQuantity}
+              onChange={(e) => setStockQuantity(e.target.value)}
+              placeholder="e.g. 50"
+              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none"
+            />
+          </div>
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={submitting}
@@ -415,17 +499,21 @@ function AddProductForm({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Edit Product Form
+// ---------------------------------------------------------------------------
+
 function EditProductForm({
   product,
-  botApiBase,
-  apiSecret,
+  apiBase,
+  showAdvanced,
   onSave,
   onCancel,
   onError,
 }: {
   product: Product;
-  botApiBase: string;
-  apiSecret: string;
+  apiBase: string;
+  showAdvanced: boolean;
   onSave: (p: Product) => void;
   onCancel: () => void;
   onError: (msg: string) => void;
@@ -434,33 +522,46 @@ function EditProductForm({
   const [price, setPrice] = useState((product.price / 100).toString());
   const [description, setDescription] = useState(product.description || "");
   const [category, setCategory] = useState(product.category || "");
+  const [sku, setSku] = useState(product.sku || "");
+  const [stockQuantity, setStockQuantity] = useState(
+    product.stockQuantity?.toString() || ""
+  );
   const [saving, setSaving] = useState(false);
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch(`${botApiBase}/products/${product.id}`, {
+      const payload: Record<string, unknown> = {
+        name,
+        price: Math.round(parseFloat(price) * 100),
+        description,
+        category,
+      };
+
+      if (showAdvanced) {
+        if (sku) payload.sku = sku;
+        if (stockQuantity) payload.stockQuantity = parseInt(stockQuantity, 10);
+      }
+
+      const res = await fetch(`${apiBase}/${product.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiSecret}`,
-        },
-        body: JSON.stringify({
-          name,
-          price: Math.round(parseFloat(price) * 100),
-          description,
-          category,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
+
       if (res.ok) {
         const updated = await res.json();
         onSave({
           ...product,
-          name: updated.order?.name || name,
-          price: Math.round(parseFloat(price) * 100),
-          description,
-          category,
+          name: updated.name || name,
+          price: updated.price ?? Math.round(parseFloat(price) * 100),
+          description: updated.description ?? description,
+          category: updated.category ?? category,
+          inStock: updated.inStock ?? product.inStock,
+          sku: updated.sku ?? sku,
+          stockQuantity: updated.stockQuantity ?? product.stockQuantity,
+          variants: updated.variants ?? product.variants,
         });
       } else {
         onError("Could not update product.");
@@ -474,7 +575,9 @@ function EditProductForm({
   return (
     <form onSubmit={handleSave} className="space-y-3">
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">Name</label>
+        <label className="block text-xs font-medium text-slate-600 mb-1">
+          Name
+        </label>
         <input
           type="text"
           value={name}
@@ -485,7 +588,9 @@ function EditProductForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Price (ZAR)</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1">
+            Price (ZAR)
+          </label>
           <input
             type="number"
             step="0.01"
@@ -497,7 +602,9 @@ function EditProductForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Category</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1">
+            Category
+          </label>
           <input
             type="text"
             value={category}
@@ -507,7 +614,9 @@ function EditProductForm({
         </div>
       </div>
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+        <label className="block text-xs font-medium text-slate-600 mb-1">
+          Description
+        </label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -515,6 +624,35 @@ function EditProductForm({
           className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none resize-none"
         />
       </div>
+
+      {showAdvanced && (
+        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              SKU
+            </label>
+            <input
+              type="text"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              Stock quantity
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={stockQuantity}
+              onChange={(e) => setStockQuantity(e.target.value)}
+              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button
           type="submit"

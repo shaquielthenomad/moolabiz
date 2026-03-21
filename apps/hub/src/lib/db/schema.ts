@@ -15,10 +15,13 @@ export const merchants = pgTable("merchants", {
   openclawContainerId: text("openclaw_container_id"),
   subdomain: text("subdomain"),
   yocoCheckoutId: text("yoco_checkout_id"),
+  yocoSecretKey: text("yoco_secret_key"),
   subscriptionId: text("subscription_id"),
   whatsappVerifyToken: text("whatsapp_verify_token"),
   whatsappAppSecret: text("whatsapp_app_secret"),
   apiSecret: text("api_secret"),
+  vendureChannelId: text("vendure_channel_id"),
+  vendureChannelToken: text("vendure_channel_token"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

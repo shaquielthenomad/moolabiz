@@ -6,14 +6,27 @@ function getResend(): Resend {
   return new Resend(key);
 }
 
+/** Escape user-provided strings before interpolating into HTML. */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function sendWelcomeEmail(opts: {
   to: string;
   businessName: string;
   slug: string;
   plan: string;
 }) {
-  const storeUrl = `https://${opts.slug}.bot.moolabiz.shop`;
-  const onboardUrl = `${storeUrl}/onboard`;
+  const safeSlug = escapeHtml(opts.slug);
+  const safeName = escapeHtml(opts.businessName);
+  const safePlan = escapeHtml(opts.plan);
+  const storeUrl = `https://${safeSlug}.store.moolabiz.shop`;
+  const onboardUrl = `https://${safeSlug}.bot.moolabiz.shop/onboard`;
   const dashboardUrl = `https://moolabiz.shop/dashboard`;
 
   try {
@@ -26,7 +39,7 @@ export async function sendWelcomeEmail(opts: {
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
           <h1 style="font-size: 24px; color: #0f172a; margin-bottom: 8px;">Welcome to MoolaBiz</h1>
           <p style="color: #64748b; font-size: 15px; line-height: 1.6;">
-            Your store <strong>${opts.businessName}</strong> is being set up. Here's everything you need to get started.
+            Your store <strong>${safeName}</strong> is being set up. Here's everything you need to get started.
           </p>
 
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0;">
@@ -64,7 +77,7 @@ export async function sendWelcomeEmail(opts: {
           <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
 
           <p style="color: #94a3b8; font-size: 13px; line-height: 1.5;">
-            Plan: ${opts.plan}<br>
+            Plan: ${safePlan}<br>
             Need help? Reply to this email or contact support@moolabiz.shop<br><br>
             MoolaBiz — Made in South Africa
           </p>

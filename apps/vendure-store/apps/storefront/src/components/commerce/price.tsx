@@ -5,10 +5,10 @@ interface PriceProps {
     currencyCode?: string;
 }
 
-export function Price({value, currencyCode = 'USD'}: PriceProps) {
+export function Price({value, currencyCode = 'ZAR'}: PriceProps) {
     return (
         <>
-            {new Intl.NumberFormat('en-US', {
+            {new Intl.NumberFormat('en-ZA', {
                 style: 'currency',
                 currency: currencyCode,
             }).format(value / 100)}

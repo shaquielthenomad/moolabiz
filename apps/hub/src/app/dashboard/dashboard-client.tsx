@@ -174,7 +174,9 @@ export function DashboardClient({ merchant }: { merchant: MerchantData }) {
     day: "numeric",
   });
 
-  const botUrl = merchant.subdomain ? `https://${merchant.subdomain}` : null;
+  // Store URL points to the Vendure storefront; bot URL is for the onboard/QR page.
+  const storeUrl = merchant.slug ? `https://${merchant.slug}.store.moolabiz.shop` : null;
+  const botUrl = storeUrl; // alias kept for action buttons ("View store")
 
   return (
     <main className="min-h-screen bg-slate-50 pb-12">
@@ -225,16 +227,16 @@ export function DashboardClient({ merchant }: { merchant: MerchantData }) {
           </div>
 
           <div className="space-y-3 text-sm">
-            {botUrl && (
+            {storeUrl && (
               <div className="flex items-center justify-between gap-3">
                 <span className="text-slate-500 shrink-0">Store URL</span>
                 <a
-                  href={botUrl}
+                  href={storeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-emerald-600 font-medium hover:text-emerald-700 hover:underline text-right break-all"
                 >
-                  {merchant.subdomain}
+                  {merchant.slug}.store.moolabiz.shop
                   <ExternalLinkIcon className="w-3 h-3 shrink-0" />
                 </a>
               </div>

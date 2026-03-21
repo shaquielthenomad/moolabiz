@@ -101,7 +101,8 @@ function WhatsAppIcon({ className }: { className?: string }) {
 function SetupContent() {
   const params = useSearchParams();
   const slug = params.get("slug") || "your-business";
-  const subdomain = `${slug}.bot.moolabiz.shop`;
+  const subdomain = `${slug}.store.moolabiz.shop`;
+  const onboardSubdomain = `${slug}.bot.moolabiz.shop`;
   const [status, setStatus] = useState<ProvisionStatus>("loading");
   const [error, setError] = useState("");
 
@@ -282,7 +283,7 @@ function SetupContent() {
 
                 {/* Connect WhatsApp */}
                 <a
-                  href={`https://${subdomain}/onboard`}
+                  href={`https://${onboardSubdomain}/onboard`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3"

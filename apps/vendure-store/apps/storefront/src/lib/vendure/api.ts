@@ -1,14 +1,58 @@
 import type {TadaDocumentNode} from 'gql.tada';
 import {print} from 'graphql';
+import {headers as getHeaders} from 'next/headers';
 import {getAuthToken} from '@/lib/auth';
 
 const VENDURE_API_URL = process.env.VENDURE_SHOP_API_URL || process.env.NEXT_PUBLIC_VENDURE_SHOP_API_URL;
-const VENDURE_CHANNEL_TOKEN = process.env.VENDURE_CHANNEL_TOKEN || process.env.NEXT_PUBLIC_VENDURE_CHANNEL_TOKEN || '__default_channel__';
+const VENDURE_CHANNEL_TOKEN_FALLBACK = process.env.VENDURE_CHANNEL_TOKEN || process.env.NEXT_PUBLIC_VENDURE_CHANNEL_TOKEN || '__default_channel__';
 const VENDURE_AUTH_TOKEN_HEADER = process.env.VENDURE_AUTH_TOKEN_HEADER || 'vendure-auth-token';
 const VENDURE_CHANNEL_TOKEN_HEADER = process.env.VENDURE_CHANNEL_TOKEN_HEADER || 'vendure-token';
 
 if (!VENDURE_API_URL) {
     throw new Error('VENDURE_SHOP_API_URL or NEXT_PUBLIC_VENDURE_SHOP_API_URL environment variable is not set');
+}
+
+/**
+ * Read the Vendure channel token dynamically.
+ *
+ * In production the middleware resolves the merchant from the subdomain and
+ * forwards the token via the `x-vendure-channel-token` request header.
+ * Falls back to the env-var value for local development without subdomains.
+ */
+async function getChannelToken(): Promise<string> {
+    try {
+        const hdrs = await getHeaders();
+        const dynamicToken = hdrs.get('x-vendure-channel-token');
+        if (dynamicToken) return dynamicToken;
+    } catch {
+        // headers() unavailable outside of a request context (e.g. build time)
+    }
+    return VENDURE_CHANNEL_TOKEN_FALLBACK;
+}
+
+/**
+ * Read the current store's display name (set by middleware).
+ * Returns null when running without subdomain resolution.
+ */
+export async function getStoreName(): Promise<string | null> {
+    try {
+        const hdrs = await getHeaders();
+        return hdrs.get('x-store-name');
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Read the current store's slug (set by middleware).
+ */
+export async function getStoreSlug(): Promise<string | null> {
+    try {
+        const hdrs = await getHeaders();
+        return hdrs.get('x-store-slug');
+    } catch {
+        return null;
+    }
 }
 
 interface VendureRequestOptions {
@@ -64,8 +108,8 @@ export async function query<TResult, TVariables>(
         headers['Authorization'] = `Bearer ${authToken}`;
     }
 
-    // Set the channel token header (use provided channelToken or default)
-    headers[VENDURE_CHANNEL_TOKEN_HEADER] = channelToken || VENDURE_CHANNEL_TOKEN;
+    // Set the channel token header — dynamic resolution from middleware, env fallback
+    headers[VENDURE_CHANNEL_TOKEN_HEADER] = channelToken || await getChannelToken();
 
     const response = await fetch(VENDURE_API_URL!, {
         ...fetchOptions,

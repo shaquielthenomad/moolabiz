@@ -6,6 +6,7 @@ import {Navbar} from "@/components/layout/navbar";
 import {Footer} from "@/components/layout/footer";
 import {ThemeProvider} from "@/components/providers/theme-provider";
 import {SITE_NAME, SITE_URL} from "@/lib/metadata";
+import {getStoreName} from "@/lib/vendure/api";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -17,34 +18,43 @@ const geistMono = Geist_Mono({
     subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-    metadataBase: new URL(SITE_URL),
-    title: {
-        default: SITE_NAME,
-        template: `%s | ${SITE_NAME}`,
-    },
-    description:
-        "Shop the best products at Vendure Store. Quality products, competitive prices, and fast delivery.",
-    openGraph: {
-        type: "website",
-        siteName: SITE_NAME,
-        locale: "en_US",
-    },
-    twitter: {
-        card: "summary_large_image",
-    },
-    robots: {
-        index: true,
-        follow: true,
-        googleBot: {
+/**
+ * Generate metadata dynamically based on the resolved merchant.
+ * When accessed via a merchant subdomain the store name comes from the
+ * middleware; otherwise falls back to the static SITE_NAME.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+    const storeName = (await getStoreName()) || SITE_NAME;
+
+    return {
+        metadataBase: new URL(SITE_URL),
+        title: {
+            default: storeName,
+            template: `%s | ${storeName}`,
+        },
+        description:
+            `Shop the best products at ${storeName}. Quality products, competitive prices, and fast delivery.`,
+        openGraph: {
+            type: "website",
+            siteName: storeName,
+            locale: "en_ZA",
+        },
+        twitter: {
+            card: "summary_large_image",
+        },
+        robots: {
             index: true,
             follow: true,
-            "max-video-preview": -1,
-            "max-image-preview": "large",
-            "max-snippet": -1,
+            googleBot: {
+                index: true,
+                follow: true,
+                "max-video-preview": -1,
+                "max-image-preview": "large",
+                "max-snippet": -1,
+            },
         },
-    },
-};
+    };
+}
 
 export const viewport: Viewport = {
     width: "device-width",

@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
-import crypto from "crypto";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { merchants, webhookEvents } from "@/lib/db/schema";
 import { constructWebhookEvent } from "@/lib/stripe";
-import {
-  createApplication,
-  setEnvironmentVariables,
-  deployApplication,
-  stopApplication,
-  startApplication,
-} from "@/lib/coolify";
-import { deployOpenClaw, stopOpenClaw, startOpenClaw } from "@/lib/openclaw";
+import { stopOpenClaw, startOpenClaw } from "@/lib/openclaw";
+import { provisionMerchant } from "@/lib/provisioning";
 
 export async function POST(request: Request) {
   try {
@@ -119,69 +112,24 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
     .set({ merchantId })
     .where(eq(webhookEvents.eventId, eventId));
 
-  const subdomain = merchant.subdomain || `${merchant.slug}.bot.moolabiz.shop`;
-  const domains = `https://${subdomain}`;
-
   console.log(`[stripe] Provisioning bot for ${merchant.businessName} (${merchant.slug})`);
 
-  try {
-    const app = await createApplication(merchant.slug, merchant.businessName, domains);
+  const result = await provisionMerchant({
+    merchantId,
+    slug: merchant.slug,
+    businessName: merchant.businessName,
+    whatsappNumber: merchant.whatsappNumber,
+    paymentProvider: merchant.paymentProvider,
+    plan: merchant.plan,
+    email: merchant.email,
+    existingVendureChannelId: merchant.vendureChannelId,
+    existingVendureChannelToken: merchant.vendureChannelToken,
+  });
 
-    // Save app UUID immediately so retries don't create duplicates
-    await db.update(merchants).set({
-      coolifyAppUuid: app.uuid,
-      updatedAt: new Date(),
-    }).where(eq(merchants.id, merchantId));
-
-    const apiSecret = crypto.randomBytes(32).toString("hex");
-    await setEnvironmentVariables(app.uuid, {
-      BUSINESS_NAME: merchant.businessName,
-      BUSINESS_SLUG: merchant.slug,
-      WHATSAPP_NUMBER: merchant.whatsappNumber,
-      PAYMENT_PROVIDER: merchant.paymentProvider,
-      PLAN: merchant.plan,
-      API_SECRET: apiSecret,
-      DB_PATH: "/data/store.db",
-      OPENCLAW_PROVISIONER_URL: "http://openclaw-provisioner:9999",
-      OPENCLAW_PROVISIONER_KEY: process.env.OPENCLAW_PROVISIONER_KEY || "moolabiz-provision-key",
-    });
-
-    // Store API secret in hub DB so the dashboard can proxy requests to the bot
-    await db.update(merchants).set({ apiSecret, updatedAt: new Date() })
-      .where(eq(merchants.id, merchantId));
-
-    await deployApplication(app.uuid);
-    console.log(`[stripe] Catalog deploying: ${subdomain} (${app.uuid})`);
-
-    // Deploy OpenClaw WhatsApp bot
-    let openclawContainerId: string | null = null;
-    try {
-      const ocResult = await deployOpenClaw({
-        slug: merchant.slug,
-        businessName: merchant.businessName,
-        ownerPhone: merchant.whatsappNumber,
-        paymentProvider: merchant.paymentProvider,
-        apiSecret,
-      });
-      openclawContainerId = ocResult.containerId;
-      console.log(`[stripe] OpenClaw deployed: ${openclawContainerId}`);
-    } catch (ocErr) {
-      console.error("[stripe] OpenClaw failed (non-fatal):", ocErr);
-    }
-
-    await db.update(merchants).set({
-      status: "active",
-      openclawContainerId,
-      updatedAt: new Date(),
-    }).where(eq(merchants.id, merchantId));
-
-    console.log(`[stripe] Bot deploying: ${subdomain} (app: ${app.uuid})`);
-  } catch (err) {
-    console.error("[stripe] Provisioning failed:", err);
-    await db.update(merchants).set({
-      status: "pending",
-      updatedAt: new Date(),
-    }).where(eq(merchants.id, merchantId));
+  if (result.success) {
+    console.log(`[stripe] Provisioning complete for ${merchant.businessName}`);
+  } else {
+    console.error(`[stripe] Provisioning failed for ${merchant.businessName}: ${result.error}`);
   }
 }
 
@@ -193,15 +141,11 @@ async function handleSubscriptionCancelled(subscription: Record<string, unknown>
   const [merchant] = await db.select().from(merchants)
     .where(eq(merchants.subscriptionId, subscriptionId)).limit(1);
 
-  if (!merchant || !merchant.coolifyAppUuid) return;
+  if (!merchant) return;
 
   console.log(`[stripe] Cancelling bot for ${merchant.businessName}`);
 
-  try { await stopApplication(merchant.coolifyAppUuid); } catch (err) {
-    console.error("[stripe] Failed to stop app:", err);
-  }
-
-  // Also stop OpenClaw container
+  // Stop OpenClaw container
   try { await stopOpenClaw(merchant.slug); } catch (err) {
     console.error("[stripe] Failed to stop OpenClaw:", err);
   }
@@ -220,15 +164,11 @@ async function handlePaymentFailed(invoice: Record<string, unknown>, eventId: st
   const [merchant] = await db.select().from(merchants)
     .where(eq(merchants.subscriptionId, subscriptionId)).limit(1);
 
-  if (!merchant || !merchant.coolifyAppUuid) return;
+  if (!merchant) return;
 
   console.log(`[stripe] Suspending bot for ${merchant.businessName} (payment failed)`);
 
-  try { await stopApplication(merchant.coolifyAppUuid); } catch (err) {
-    console.error("[stripe] Failed to stop app:", err);
-  }
-
-  // Also stop OpenClaw container
+  // Stop OpenClaw container
   try { await stopOpenClaw(merchant.slug); } catch (err) {
     console.error("[stripe] Failed to stop OpenClaw:", err);
   }
@@ -251,12 +191,9 @@ async function handleSubscriptionUpdated(subscription: Record<string, unknown>, 
   if (!merchant) return;
 
   // If subscription becomes active again (e.g. payment retry succeeded)
-  if (status === "active" && merchant.status === "suspended" && merchant.coolifyAppUuid) {
+  if (status === "active" && merchant.status === "suspended") {
     console.log(`[stripe] Reactivating bot for ${merchant.businessName}`);
-    try { await startApplication(merchant.coolifyAppUuid); } catch (err) {
-      console.error("[stripe] Failed to start app:", err);
-    }
-    // Also restart OpenClaw container
+    // Restart OpenClaw container
     try { await startOpenClaw(merchant.slug); } catch (err) {
       console.error("[stripe] Failed to start OpenClaw:", err);
     }

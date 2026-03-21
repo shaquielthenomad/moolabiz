@@ -12,7 +12,7 @@ BUSINESS_NAME="${2:?Missing business name}"
 OWNER_PHONE="${3:?Missing owner phone}"
 PAYMENT_PROVIDER="${4:?Missing payment provider}"
 OLLAMA_URL="${5:-http://ollama-shared:11434}"
-CATALOG_URL="https://${SLUG}.bot.moolabiz.shop"
+CATALOG_URL="https://${SLUG}.store.moolabiz.shop"
 
 CONFIG_DIR="/data/openclaw/${SLUG}"
 

@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 const SLUG = process.env.BUSINESS_SLUG || "";
 const PROVISIONER_URL = process.env.OPENCLAW_PROVISIONER_URL || "http://openclaw-provisioner:9999";
-const PROVISIONER_KEY = process.env.OPENCLAW_PROVISIONER_KEY || "moolabiz-provision-key";
+const PROVISIONER_KEY = process.env.OPENCLAW_PROVISIONER_KEY;
+
+if (!PROVISIONER_KEY) {
+  throw new Error("OPENCLAW_PROVISIONER_KEY env var is required");
+}
 
 /**
  * Returns WhatsApp connection status by asking the provisioner

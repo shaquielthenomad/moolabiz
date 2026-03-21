@@ -3,25 +3,15 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import {
+  vendureAdminQuery,
+  LIST_ORDERS_QUERY,
+  simplifyOrder,
+  SimpleOrder,
+} from "@/lib/vendure";
 import { OrdersClient } from "./orders-client";
 
 export const dynamic = "force-dynamic";
-
-interface OrderItem {
-  name: string;
-  quantity: number;
-  price: number;
-}
-
-interface Order {
-  id: string;
-  customerName?: string;
-  customerPhone?: string;
-  items: OrderItem[];
-  total: number;
-  status: string;
-  createdAt: string;
-}
 
 export default async function OrdersPage() {
   const session = await getSession();
@@ -39,10 +29,25 @@ export default async function OrdersPage() {
     redirect("/login");
   }
 
-  let orders: Order[] = [];
+  let orders: SimpleOrder[] = [];
   let fetchError = "";
 
-  if (merchant.apiSecret) {
+  if (merchant.vendureChannelToken) {
+    try {
+      const data = await vendureAdminQuery<{
+        orders: { totalItems: number; items: unknown[] };
+      }>(merchant.vendureChannelToken, LIST_ORDERS_QUERY, {
+        options: { take: 250, skip: 0, sort: { createdAt: "DESC" } },
+      });
+
+      orders = (data.orders.items || []).map(simplifyOrder);
+    } catch (err) {
+      console.error("[orders page]", err);
+      fetchError =
+        "Could not load orders. Please try refreshing the page.";
+    }
+  } else if (merchant.apiSecret) {
+    // Fallback: try the legacy bot API if no vendure channel yet
     try {
       const res = await fetch(
         `https://${merchant.slug}.bot.moolabiz.shop/api/orders`,
@@ -55,13 +60,16 @@ export default async function OrdersPage() {
         const data = await res.json();
         orders = Array.isArray(data) ? data : data.orders || [];
       } else {
-        fetchError = "Could not load orders from your store. It may still be deploying.";
+        fetchError =
+          "Could not load orders from your store. It may still be deploying.";
       }
     } catch {
-      fetchError = "Could not connect to your store. It may still be deploying.";
+      fetchError =
+        "Could not connect to your store. It may still be deploying.";
     }
   } else {
-    fetchError = "Your store is still being set up. Orders will be available once deployment is complete.";
+    fetchError =
+      "Your store is still being set up. Orders will be available once deployment is complete.";
   }
 
   return (
@@ -69,7 +77,7 @@ export default async function OrdersPage() {
       merchant={{
         slug: merchant.slug,
         businessName: merchant.businessName,
-        apiSecret: merchant.apiSecret || "",
+        useVendure: !!merchant.vendureChannelToken,
       }}
       initialOrders={orders}
       fetchError={fetchError}

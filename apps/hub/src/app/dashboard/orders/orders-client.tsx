@@ -11,6 +11,7 @@ interface OrderItem {
 
 interface Order {
   id: string;
+  code: string;
   customerName?: string;
   customerPhone?: string;
   items: OrderItem[];
@@ -22,26 +23,55 @@ interface Order {
 interface MerchantInfo {
   slug: string;
   businessName: string;
-  apiSecret: string;
+  useVendure: boolean;
 }
 
-const STATUS_FLOW = ["pending", "confirmed", "fulfilled"];
+// Vendure order states mapped to simple dashboard labels
+const VENDURE_STATE_LABELS: Record<string, string> = {
+  AddingItems: "Draft",
+  ArrangingPayment: "Pending Payment",
+  PaymentAuthorized: "Payment Authorized",
+  PaymentSettled: "Paid",
+  PartiallyShipped: "Partially Shipped",
+  Shipped: "Shipped",
+  PartiallyDelivered: "Partially Delivered",
+  Delivered: "Delivered",
+  Cancelled: "Cancelled",
+};
+
+// Which states can advance, and to what
+const VENDURE_NEXT_STATE: Record<string, string> = {
+  PaymentSettled: "Shipped",
+  Shipped: "Delivered",
+};
+
+function displayStatus(status: string): string {
+  return VENDURE_STATE_LABELS[status] || status.charAt(0).toUpperCase() + status.slice(1);
+}
 
 function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, string> = {
+  const label = displayStatus(status);
+  const configMap: Record<string, string> = {
+    AddingItems: "bg-slate-50 text-slate-600 border-slate-200",
+    ArrangingPayment: "bg-amber-50 text-amber-700 border-amber-200",
+    PaymentAuthorized: "bg-amber-50 text-amber-700 border-amber-200",
+    PaymentSettled: "bg-blue-50 text-blue-700 border-blue-200",
+    Shipped: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    Delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    Cancelled: "bg-red-50 text-red-600 border-red-200",
+    // Legacy statuses
     pending: "bg-amber-50 text-amber-700 border-amber-200",
     confirmed: "bg-blue-50 text-blue-700 border-blue-200",
     fulfilled: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    cancelled: "bg-red-50 text-red-600 border-red-200",
   };
 
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
-        config[status] || "bg-slate-50 text-slate-600 border-slate-200"
+        configMap[status] || "bg-slate-50 text-slate-600 border-slate-200"
       }`}
     >
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {label}
     </span>
   );
 }
@@ -62,45 +92,40 @@ export function OrdersClient({
   } | null>(null);
   const [loading, setLoading] = useState("");
 
-  const botApiBase = `https://${merchant.slug}.bot.moolabiz.shop/api`;
-
   function showNotif(type: "error" | "success", message: string) {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
   }
 
-  async function handleUpdateStatus(orderId: string, newStatus: string) {
-    setLoading(orderId);
+  async function handleUpdateStatus(order: Order, newState: string) {
+    setLoading(order.id);
     try {
-      const res = await fetch(`${botApiBase}/orders/${orderId}`, {
+      const res = await fetch(`/api/dashboard/orders/${order.code}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${merchant.apiSecret}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: newState }),
       });
 
       if (res.ok) {
+        const data = await res.json();
         setOrders((prev) =>
           prev.map((o) =>
-            o.id === orderId ? { ...o, status: newStatus } : o
+            o.id === order.id ? { ...o, status: data.state || newState } : o
           )
         );
-        showNotif("success", `Order updated to ${newStatus}.`);
+        showNotif("success", `Order updated to ${displayStatus(newState)}.`);
       } else {
-        showNotif("error", "Could not update order.");
+        const err = await res.json().catch(() => ({}));
+        showNotif("error", err.error || "Could not update order.");
       }
     } catch {
-      showNotif("error", "Could not connect to your store.");
+      showNotif("error", "Could not connect. Please try again.");
     }
     setLoading("");
   }
 
-  function getNextStatus(currentStatus: string): string | null {
-    const idx = STATUS_FLOW.indexOf(currentStatus);
-    if (idx === -1 || idx >= STATUS_FLOW.length - 1) return null;
-    return STATUS_FLOW[idx + 1];
+  function getNextState(currentStatus: string): string | null {
+    return VENDURE_NEXT_STATE[currentStatus] || null;
   }
 
   async function handleLogout() {
@@ -161,13 +186,13 @@ export function OrdersClient({
               <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
                 <p className="text-slate-500 text-sm">
                   No orders yet. Orders will appear here when customers place
-                  them through your WhatsApp store.
+                  them through your store.
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {orders.map((order) => {
-                  const nextStatus = getNextStatus(order.status);
+                  const nextState = getNextState(order.status);
                   const orderDate = new Date(order.createdAt).toLocaleDateString(
                     "en-ZA",
                     {
@@ -188,7 +213,7 @@ export function OrdersClient({
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-mono text-slate-400">
-                              #{order.id.slice(0, 8)}
+                              #{order.code || order.id.slice(0, 8)}
                             </span>
                             <StatusBadge status={order.status} />
                           </div>
@@ -218,7 +243,7 @@ export function OrdersClient({
                               {item.quantity}x {item.name}
                             </span>
                             <span className="text-slate-500">
-                              R{((item.price * item.quantity) / 100).toFixed(2)}
+                              R{(item.price / 100).toFixed(2)}
                             </span>
                           </div>
                         ))}
@@ -230,17 +255,15 @@ export function OrdersClient({
                         </div>
                       </div>
 
-                      {nextStatus && (
+                      {nextState && (
                         <button
-                          onClick={() =>
-                            handleUpdateStatus(order.id, nextStatus)
-                          }
+                          onClick={() => handleUpdateStatus(order, nextState)}
                           disabled={loading === order.id}
                           className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm py-2 rounded-lg transition-colors disabled:opacity-50"
                         >
                           {loading === order.id
                             ? "Updating..."
-                            : `Mark as ${nextStatus}`}
+                            : `Mark as ${displayStatus(nextState)}`}
                         </button>
                       )}
                     </div>

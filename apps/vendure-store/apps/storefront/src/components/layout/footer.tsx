@@ -2,6 +2,7 @@ import {cacheLife} from 'next/cache';
 import {getTopCollections} from '@/lib/vendure/cached';
 import Image from "next/image";
 import Link from "next/link";
+import {SITE_NAME} from "@/lib/metadata";
 
 
 async function Copyright() {
@@ -10,7 +11,7 @@ async function Copyright() {
 
     return (
         <div>
-            © {new Date().getFullYear()} Vendure Store. All rights reserved.
+            © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
         </div>
     )
 }
@@ -27,7 +28,7 @@ export async function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div>
                         <p className="text-sm font-semibold mb-4 uppercase tracking-wider">
-                            Vendure Store
+                            {SITE_NAME}
                         </p>
                     </div>
 
@@ -48,36 +49,36 @@ export async function Footer() {
                     </div>
 
                     <div>
-                        <h4 className="text-sm font-semibold mb-4">Vendure</h4>
+                        <h4 className="text-sm font-semibold mb-4">MoolaBiz</h4>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>
                                 <a
-                                    href="https://github.com/vendure-ecommerce"
+                                    href="https://moolabiz.shop"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="hover:text-foreground transition-colors"
                                 >
-                                    GitHub
+                                    About MoolaBiz
                                 </a>
                             </li>
                             <li>
                                 <a
-                                    href="https://docs.vendure.io"
+                                    href="https://moolabiz.shop/terms"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="hover:text-foreground transition-colors"
                                 >
-                                    Documentation
+                                    Terms of Service
                                 </a>
                             </li>
                             <li>
                                 <a
-                                    href="https://github.com/vendure-ecommerce/vendure"
+                                    href="https://moolabiz.shop/privacy"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="hover:text-foreground transition-colors"
                                 >
-                                    Source code
+                                    Privacy Policy
                                 </a>
                             </li>
                         </ul>
@@ -91,21 +92,12 @@ export async function Footer() {
                     <div className="flex items-center gap-2">
                         <span>Powered by</span>
                         <a
-                            href="https://vendure.io"
+                            href="https://moolabiz.shop"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:text-foreground transition-colors"
+                            className="hover:text-foreground transition-colors font-semibold"
                         >
-                            <Image src="/vendure.svg" alt="Vendure" width={40} height={27} className="h-4 w-auto dark:invert" />
-                        </a>
-                        <span>&</span>
-                        <a
-                            href="https://nextjs.org"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:text-foreground transition-colors"
-                        >
-                            <Image src="/next.svg" alt="Next.js" width={16} height={16} className="h-5 w-auto dark:invert" />
+                            MoolaBiz
                         </a>
                     </div>
                 </div>

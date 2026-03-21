@@ -20,7 +20,7 @@ export default async function SettingsPage() {
   return (
     <SettingsClient
       slug={merchant.slug}
-      subdomain={merchant.subdomain || `${merchant.slug}.bot.moolabiz.shop`}
+      subdomain={`${merchant.slug}.store.moolabiz.shop`}
       apiSecret={merchant.apiSecret || ""}
       paymentProvider={merchant.paymentProvider}
     />

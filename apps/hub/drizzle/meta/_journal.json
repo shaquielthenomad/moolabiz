@@ -8,6 +8,20 @@
       "when": 1773825384170,
       "tag": "0000_luxuriant_psylocke",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773825500000,
+      "tag": "0001_add_openclaw_container_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1742515200000,
+      "tag": "0002_add_vendure_and_auth_columns",
+      "breakpoints": true
     }
   ]
 }

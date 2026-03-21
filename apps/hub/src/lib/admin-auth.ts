@@ -55,10 +55,11 @@ export function verifyAdminToken(token: string): boolean {
 
 export function checkAdminPassword(password: string): boolean {
   const secret = getAdminSecret();
-  // Constant-time compare to prevent timing attacks
-  const a = Buffer.from(password);
-  const b = Buffer.from(secret);
-  if (a.length !== b.length) return false;
+  // Compare HMAC-SHA256 digests so both buffers are always the same length,
+  // eliminating the length oracle that raw buffer comparison would leak.
+  const key = "moolabiz-admin-password-check";
+  const a = crypto.createHmac("sha256", key).update(password).digest();
+  const b = crypto.createHmac("sha256", key).update(secret).digest();
   return crypto.timingSafeEqual(a, b);
 }
 

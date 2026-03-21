@@ -9,8 +9,14 @@
 
 const PROVISIONER_URL =
   process.env.OPENCLAW_PROVISIONER_URL || "http://openclaw-provisioner:9999";
-const PROVISIONER_KEY =
-  process.env.OPENCLAW_PROVISIONER_KEY || "moolabiz-provision-key";
+
+function getProvisionerKey(): string {
+  const key = process.env.OPENCLAW_PROVISIONER_KEY;
+  if (!key) {
+    throw new Error("OPENCLAW_PROVISIONER_KEY env var is required");
+  }
+  return key;
+}
 
 async function provisionerRequest(
   path: string,
@@ -20,7 +26,7 @@ async function provisionerRequest(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-auth-key": PROVISIONER_KEY,
+      "x-auth-key": getProvisionerKey(),
     },
     body: JSON.stringify(body),
   });
@@ -47,6 +53,7 @@ export async function deployOpenClaw(opts: {
   ownerPhone: string;
   paymentProvider: string;
   apiSecret?: string;
+  vendureChannelToken?: string;
 }): Promise<{ containerId: string }> {
   console.log(`[openclaw] Deploying for ${opts.slug}...`);
 
@@ -55,6 +62,7 @@ export async function deployOpenClaw(opts: {
     businessName: opts.businessName,
     ownerPhone: opts.ownerPhone,
     apiSecret: opts.apiSecret,
+    vendureChannelToken: opts.vendureChannelToken,
   });
 
   const data = (await res.json()) as { containerId: string };
