@@ -341,6 +341,7 @@ On success: "Payment key saved! Customers can now pay online."
   ];
   if (apiSecret) args.push("--env", `API_SECRET=${apiSecret}`);
   if (ownerPhone) args.push("--env", `OWNER_PHONE=${ownerPhone}`);
+  if (process.env.GROQ_API_KEY) args.push("--env", `GROQ_API_KEY=${process.env.GROQ_API_KEY}`);
   args.push("moolabiz/openclaw:latest");
   args.push("--profile", s, "gateway", "--port", "18789", "--bind", "loopback", "--allow-unconfigured");
 
