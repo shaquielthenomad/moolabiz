@@ -8,7 +8,7 @@ export const metadata: Metadata = {
         absolute: `${SITE_NAME} - Your One-Stop Shop`,
     },
     description:
-        "Discover high-quality products at competitive prices. Shop now for the best deals on electronics, fashion, home goods, and more.",
+        "Discover high-quality products at competitive prices. Shop now for the best deals at our online store.",
     alternates: {
         canonical: buildCanonicalUrl("/"),
     },
@@ -64,8 +64,8 @@ export default async function Home(_props: PageProps<'/'>) {
                                           d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
                             </div>
-                            <h3 className="text-xl font-semibold">Fast Delivery</h3>
-                            <p className="text-muted-foreground">Quick and reliable shipping worldwide</p>
+                            <h3 className="text-xl font-semibold">Local Delivery</h3>
+                            <p className="text-muted-foreground">Quick and reliable shipping to your door</p>
                         </div>
                     </div>
                 </div>

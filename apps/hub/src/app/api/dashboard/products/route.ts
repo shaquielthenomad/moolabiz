@@ -134,6 +134,12 @@ export async function POST(request: NextRequest) {
     // Upload image asset if provided
     let featuredAssetId: string | undefined;
     if (imageFile) {
+      if (imageFile.size > 10 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "Image too large. Maximum size is 10MB." },
+          { status: 400 }
+        );
+      }
       try {
         const buffer = Buffer.from(await imageFile.arrayBuffer());
         const result = await uploadAssetToVendure(

@@ -244,7 +244,7 @@ export function DashboardClient({ merchant }: { merchant: MerchantData }) {
             <div className="flex items-center justify-between gap-3">
               <span className="text-slate-500">Plan</span>
               <span className="font-medium text-slate-900">
-                {merchant.planName} &mdash; {merchant.planPrice}/mo
+                {merchant.planName} &mdash; {merchant.planPrice}/month
               </span>
             </div>
           </div>
@@ -396,7 +396,7 @@ export function DashboardClient({ merchant }: { merchant: MerchantData }) {
             <div className="flex items-center justify-between gap-3">
               <dt className="text-slate-500">Plan</dt>
               <dd className="font-medium text-slate-900 text-right">
-                {merchant.planName} ({merchant.planPrice}/mo)
+                {merchant.planName} ({merchant.planPrice}/month)
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3">

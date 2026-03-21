@@ -107,7 +107,10 @@ export default function OnboardPage() {
             </li>
             <li className="flex gap-2">
               <span className="font-semibold text-slate-700 shrink-0">2.</span>
-              Go to Settings &gt; Linked Devices
+              <span>
+                Go to Settings &gt; Linked Devices
+                <span className="block text-xs text-slate-400 mt-0.5">On WhatsApp Business: tap ⋮ (menu) → Linked Devices</span>
+              </span>
             </li>
             <li className="flex gap-2">
               <span className="font-semibold text-slate-700 shrink-0">3.</span>

@@ -31,13 +31,19 @@ function jsonWithSession(
 
 export async function POST(request: Request) {
   try {
-    // No session requirement — after Stripe redirect the user may not have a cookie.
-    // Instead we verify by slug + Stripe checkout payment status.
+    // No session cookie requirement — after Stripe redirect the user may not have one.
+    // Instead we verify by slug + the Stripe checkout session ID that Stripe appended
+    // to the redirect URL. This is unguessable (64+ random chars) and proves the caller
+    // actually completed the Stripe checkout flow.
 
-    const { slug } = await request.json();
+    const { slug, sessionId } = await request.json();
 
     if (!slug || typeof slug !== "string") {
       return NextResponse.json({ error: "Missing slug" }, { status: 400 });
+    }
+
+    if (!sessionId || typeof sessionId !== "string") {
+      return NextResponse.json({ error: "Missing session ID" }, { status: 400 });
     }
 
     const [merchant] = await db
@@ -52,6 +58,13 @@ export async function POST(request: Request) {
 
     if (!merchant.yocoCheckoutId) {
       return NextResponse.json({ error: "No payment found" }, { status: 403 });
+    }
+
+    // Verify the provided session ID matches the one stored during checkout.
+    // This prevents account takeover — only someone who completed the actual
+    // Stripe checkout (and was redirected with the real session ID) can proceed.
+    if (sessionId !== merchant.yocoCheckoutId) {
+      return NextResponse.json({ error: "Invalid session ID" }, { status: 403 });
     }
 
     // Verify the checkout session is actually paid with Stripe

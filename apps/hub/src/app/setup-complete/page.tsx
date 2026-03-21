@@ -101,6 +101,7 @@ function WhatsAppIcon({ className }: { className?: string }) {
 function SetupContent() {
   const params = useSearchParams();
   const slug = params.get("slug") || "your-business";
+  const sessionId = params.get("session_id") || "";
   const subdomain = `${slug}.store.moolabiz.shop`;
   const onboardSubdomain = `${slug}.bot.moolabiz.shop`;
   const [status, setStatus] = useState<ProvisionStatus>("loading");
@@ -108,13 +109,18 @@ function SetupContent() {
 
   useEffect(() => {
     if (slug === "your-business") return;
+    if (!sessionId) {
+      setError("Missing payment session. Please complete checkout first.");
+      setStatus("error");
+      return;
+    }
 
     async function triggerProvision() {
       try {
         const res = await fetch("/api/provision-after-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug }),
+          body: JSON.stringify({ slug, sessionId }),
         });
 
         const data = await res.json();
@@ -139,7 +145,7 @@ function SetupContent() {
     }
 
     triggerProvision();
-  }, [slug]);
+  }, [slug, sessionId]);
 
   const timelineSteps: Step[] = [
     {

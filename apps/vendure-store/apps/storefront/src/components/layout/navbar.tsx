@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {NavbarCollections} from '@/components/layout/navbar/navbar-collections';
 import {NavbarCart} from '@/components/layout/navbar/navbar-cart';
@@ -8,6 +7,7 @@ import {Suspense} from "react";
 import {SearchInput} from '@/components/layout/search-input';
 import {NavbarUserSkeleton} from '@/components/shared/skeletons/navbar-user-skeleton';
 import {SearchInputSkeleton} from '@/components/shared/skeletons/search-input-skeleton';
+import {SITE_NAME} from '@/lib/metadata';
 
 export function Navbar() {
     return (
@@ -16,7 +16,7 @@ export function Navbar() {
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center gap-8">
                         <Link href="/" className="text-xl font-bold">
-                            <Image src="/vendure.svg" alt="Vendure" width={40} height={27} className="h-6 w-auto dark:invert" />
+                            {SITE_NAME}
                         </Link>
                         <nav className="hidden md:flex items-center gap-6">
                             <Suspense>

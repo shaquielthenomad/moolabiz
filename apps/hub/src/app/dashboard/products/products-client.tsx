@@ -278,7 +278,7 @@ export function ProductsClient({
                             disabled={loading === product.id}
                             className="text-xs font-medium text-slate-500 hover:text-slate-700 px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
                           >
-                            {product.inStock ? "Mark out" : "Mark in"}
+                            {product.inStock ? "Out of stock" : "Back in stock"}
                           </button>
                           <button
                             onClick={() => handleDelete(product.id)}

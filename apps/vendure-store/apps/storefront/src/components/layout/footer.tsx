@@ -1,5 +1,4 @@
 import {getTopCollections} from '@/lib/vendure/cached';
-import Image from "next/image";
 import Link from "next/link";
 import {SITE_NAME} from "@/lib/metadata";
 
@@ -72,6 +71,30 @@ export async function Footer() {
                                     className="hover:text-foreground transition-colors"
                                 >
                                     Privacy Policy
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="text-sm font-semibold mb-4">Need Help?</h4>
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                            <li>
+                                <a
+                                    href="https://wa.me/27000000000"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-foreground transition-colors"
+                                >
+                                    WhatsApp Support
+                                </a>
+                            </li>
+                            <li>
+                                <a
+                                    href="mailto:support@moolabiz.shop"
+                                    className="hover:text-foreground transition-colors"
+                                >
+                                    support@moolabiz.shop
                                 </a>
                             </li>
                         </ul>

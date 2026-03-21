@@ -138,7 +138,7 @@ export async function POST(request: Request) {
         priceId: stripePriceId,
         merchantId: merchant.id,
         slug,
-        successUrl: `${baseUrl}/setup-complete?slug=${slug}`,
+        successUrl: `${baseUrl}/setup-complete?slug=${slug}&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${baseUrl}/?cancelled=true`,
       });
 
