@@ -342,7 +342,7 @@ On success: "Payment key saved! Customers can now pay online."
   if (apiSecret) args.push("--env", `API_SECRET=${apiSecret}`);
   if (ownerPhone) args.push("--env", `OWNER_PHONE=${ownerPhone}`);
   args.push("moolabiz/openclaw:latest");
-  args.push("--profile", s, "gateway", "--port", "18789", "--bind", "local", "--allow-unconfigured");
+  args.push("--profile", s, "gateway", "--port", "18789", "--bind", "loopback", "--allow-unconfigured");
 
   const containerId = execFileSync("docker", args, { encoding: "utf-8" }).trim();
   console.log(`[provisioner] deployed openclaw-${s} => ${containerId}`);
