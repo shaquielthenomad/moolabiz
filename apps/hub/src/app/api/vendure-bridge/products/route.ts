@@ -147,7 +147,13 @@ export async function POST(request: NextRequest) {
       { input: variantInputs }
     );
 
-    // 3. Fetch back the full product to return simplified
+    // 3. Trigger search index update so product appears in storefront
+    try {
+      await vendureAdminQuery(auth.vendureChannelToken,
+        `mutation { runPendingSearchIndexUpdates { success } }`);
+    } catch { /* non-fatal */ }
+
+    // 4. Fetch back the full product to return simplified
     const { default: fullQuery } = await import("@/lib/vendure").then((m) => ({
       default: m.GET_PRODUCT_QUERY,
     }));

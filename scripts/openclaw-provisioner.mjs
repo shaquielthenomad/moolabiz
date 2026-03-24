@@ -345,8 +345,23 @@ On success: "Payment key saved! Customers can now pay online."
   args.push("moolabiz/openclaw:latest");
   args.push("--profile", s, "gateway", "--port", "18789", "--bind", "loopback", "--allow-unconfigured");
 
-  const containerId = execFileSync("docker", args, { encoding: "utf-8" }).trim();
+  const containerId = execFileSync("docker", args, { encoding: "utf-8", timeout: 30000 }).trim();
   console.log(`[provisioner] deployed openclaw-${s} => ${containerId}`);
+
+  // Copy custom workspace files to OpenClaw's actual workspace path
+  // OpenClaw reads from /root/.openclaw/workspace-{slug}/ not /root/.openclaw-{slug}/workspace/
+  setTimeout(() => {
+    try {
+      execFileSync("docker", ["exec", `openclaw-${s}`, "bash", "-c",
+        `mkdir -p /root/.openclaw/workspace-${s}/skills && ` +
+        `cp /root/.openclaw-${s}/workspace/SOUL.md /root/.openclaw/workspace-${s}/SOUL.md && ` +
+        `rm -f /root/.openclaw/workspace-${s}/BOOTSTRAP.md && ` +
+        `echo 'Customers of the shop.' > /root/.openclaw/workspace-${s}/USER.md && ` +
+        `cp -r /root/.openclaw-${s}/workspace/skills/* /root/.openclaw/workspace-${s}/skills/ 2>/dev/null || true`
+      ], { timeout: 10000 });
+      console.log(`[provisioner] copied workspace files for ${s}`);
+    } catch(e) { console.error(`[provisioner] workspace copy failed:`, e.message); }
+  }, 5000);
 
   // Auto-trigger WhatsApp channel login after a brief startup delay
   // This primes the QR code so it's ready when the merchant visits /onboard
