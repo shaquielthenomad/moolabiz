@@ -22,6 +22,13 @@
       "when": 1742515200000,
       "tag": "0002_add_vendure_and_auth_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1743091200000,
+      "tag": "0003_add_clerk_id",
+      "breakpoints": true
     }
   ]
 }

@@ -2,41 +2,19 @@ import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
-import { createSessionToken } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { provisionMerchant } from "@/lib/provisioning";
 import { MERCHANT_STATUS } from "@/lib/constants";
 
-const SESSION_COOKIE_NAME = "moolabiz_session";
-
 /**
- * Helper to create a NextResponse with the session cookie set so the
- * user is logged in for subsequent dashboard visits.
+ * POST /api/provision-after-payment
+ *
+ * Triggered after Stripe checkout completes. Verifies payment via the
+ * Stripe session ID and provisions the merchant's bot. No session cookie
+ * is set — the user is already authenticated via Clerk.
  */
-function jsonWithSession(
-  data: Record<string, unknown>,
-  merchantId: string,
-  status = 200
-): NextResponse {
-  const token = createSessionToken(merchantId);
-  const res = NextResponse.json(data, { status });
-  res.cookies.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  });
-  return res;
-}
-
 export async function POST(request: Request) {
   try {
-    // No session cookie requirement — after Stripe redirect the user may not have one.
-    // Instead we verify by slug + the Stripe checkout session ID that Stripe appended
-    // to the redirect URL. This is unguessable (64+ random chars) and proves the caller
-    // actually completed the Stripe checkout flow.
-
     const { slug, sessionId } = await request.json();
 
     if (!slug || typeof slug !== "string") {
@@ -81,25 +59,19 @@ export async function POST(request: Request) {
     }
 
     if (merchant.status === MERCHANT_STATUS.ACTIVE) {
-      return jsonWithSession(
-        {
-          success: true,
-          subdomain: merchant.subdomain,
-          status: "already_active",
-        },
-        merchant.id
-      );
+      return NextResponse.json({
+        success: true,
+        subdomain: merchant.subdomain,
+        status: "already_active",
+      });
     }
 
     if (merchant.status === MERCHANT_STATUS.PROVISIONING) {
-      return jsonWithSession(
-        {
-          success: true,
-          subdomain: merchant.subdomain,
-          status: "provisioning",
-        },
-        merchant.id
-      );
+      return NextResponse.json({
+        success: true,
+        subdomain: merchant.subdomain,
+        status: "provisioning",
+      });
     }
 
     // Atomic status transition
@@ -110,14 +82,11 @@ export async function POST(request: Request) {
       .returning();
 
     if (updated.length === 0) {
-      return jsonWithSession(
-        {
-          success: true,
-          subdomain: merchant.subdomain,
-          status: "provisioning",
-        },
-        merchant.id
-      );
+      return NextResponse.json({
+        success: true,
+        subdomain: merchant.subdomain,
+        status: "provisioning",
+      });
     }
 
     const subdomain = merchant.subdomain || `${slug}.bot.moolabiz.shop`;
@@ -137,14 +106,11 @@ export async function POST(request: Request) {
     });
 
     if (result.success) {
-      return jsonWithSession(
-        {
-          success: true,
-          subdomain,
-          status: "success",
-        },
-        merchant.id
-      );
+      return NextResponse.json({
+        success: true,
+        subdomain,
+        status: "success",
+      });
     } else {
       return NextResponse.json(
         { error: "Provisioning failed. Please refresh the page to retry." },

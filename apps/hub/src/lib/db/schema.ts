@@ -2,6 +2,7 @@ import { pgTable, text, timestamp, boolean, uuid } from "drizzle-orm/pg-core";
 
 export const merchants = pgTable("merchants", {
   id: uuid("id").defaultRandom().primaryKey(),
+  clerkId: text("clerk_id").unique(),
   businessName: text("business_name").notNull(),
   slug: text("slug").notNull().unique(),
   whatsappNumber: text("whatsapp_number").notNull().unique(),

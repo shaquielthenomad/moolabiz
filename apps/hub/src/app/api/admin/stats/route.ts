@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
-import { checkAdminRequest } from "@/lib/admin-auth";
+import { checkAdminRequestOrSession } from "@/lib/admin-auth";
 import { PLANS } from "@/lib/plans";
 
 export async function GET(request: Request) {
-  if (!checkAdminRequest(request)) {
+  if (!(await checkAdminRequestOrSession(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

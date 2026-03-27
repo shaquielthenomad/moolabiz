@@ -1,4 +1,4 @@
-import { getSession } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
@@ -14,19 +14,19 @@ import { OrdersClient } from "./orders-client";
 export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {
-  const session = await getSession();
-  if (!session) {
-    redirect("/login");
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/sign-in");
   }
 
   const [merchant] = await db
     .select()
     .from(merchants)
-    .where(eq(merchants.id, session.merchantId))
+    .where(eq(merchants.clerkId, userId))
     .limit(1);
 
   if (!merchant) {
-    redirect("/login");
+    redirect("/sign-in");
   }
 
   let orders: SimpleOrder[] = [];

@@ -1,41 +1,24 @@
 import { NextResponse } from "next/server";
-import {
-  checkAdminPassword,
-  createAdminToken,
-  ADMIN_COOKIE,
-} from "@/lib/admin-auth";
+import { checkAdminSession } from "@/lib/admin-auth";
 
-export async function POST(request: Request) {
+/**
+ * POST /api/admin/auth
+ *
+ * Verify admin status via Clerk session.
+ * The old password-based flow has been replaced by Clerk authentication.
+ * Admin users must have publicMetadata.role === "admin" set in Clerk.
+ */
+export async function POST() {
   try {
-    const body = await request.json();
-    const { password } = body as { password: string };
-
-    if (!password) {
+    const isAdmin = await checkAdminSession();
+    if (!isAdmin) {
       return NextResponse.json(
-        { error: "Password is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!checkAdminPassword(password)) {
-      return NextResponse.json(
-        { error: "Invalid password" },
+        { error: "Not authorized as admin" },
         { status: 401 }
       );
     }
 
-    const token = createAdminToken();
-
-    const response = NextResponse.json({ success: true });
-    response.cookies.set(ADMIN_COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 24 * 60 * 60, // 24 hours
-    });
-
-    return response;
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Admin auth error:", err);
     return NextResponse.json(

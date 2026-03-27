@@ -1,54 +1,33 @@
-import crypto from "crypto";
-import { cookies } from "next/headers";
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/lib/db";
+import { merchants } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
-const COOKIE_NAME = "moolabiz_session";
+/**
+ * Get the currently authenticated merchant from Clerk session.
+ *
+ * Looks up the merchant by their Clerk userId stored in the `clerk_id` column.
+ * Returns null if not authenticated or no matching merchant found.
+ */
+export async function getMerchant() {
+  const { userId } = await auth();
+  if (!userId) return null;
 
-function getSecret(): string {
-  const s = process.env.SESSION_SECRET;
-  if (!s) throw new Error("SESSION_SECRET env var is required");
-  return s;
+  const [merchant] = await db
+    .select()
+    .from(merchants)
+    .where(eq(merchants.clerkId, userId))
+    .limit(1);
+
+  return merchant ?? null;
 }
 
-export function createSessionToken(merchantId: string): string {
-  const payload = JSON.stringify({
-    merchantId,
-    exp: Date.now() + 30 * 24 * 60 * 60 * 1000,
-  });
-  const encoded = Buffer.from(payload).toString("base64url");
-  const sig = crypto
-    .createHmac("sha256", getSecret())
-    .update(encoded)
-    .digest("base64url");
-  return `${encoded}.${sig}`;
-}
-
-export function verifySessionToken(
-  token: string
-): { merchantId: string } | null {
-  try {
-    const [encoded, sig] = token.split(".");
-    if (!encoded || !sig) return null;
-    const expectedBuf = crypto
-      .createHmac("sha256", getSecret())
-      .update(encoded)
-      .digest();
-    const sigBuf = Buffer.from(sig, "base64url");
-    if (
-      sigBuf.length !== expectedBuf.length ||
-      !crypto.timingSafeEqual(sigBuf, expectedBuf)
-    )
-      return null;
-    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString());
-    if (payload.exp < Date.now()) return null;
-    return { merchantId: payload.merchantId };
-  } catch {
-    return null;
-  }
-}
-
-export async function getSession(): Promise<{ merchantId: string } | null> {
-  const store = await cookies();
-  const token = store.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifySessionToken(token);
+/**
+ * Require authentication — returns merchantId or null.
+ * Lighter weight than getMerchant() when you only need the ID.
+ */
+export async function requireAuth(): Promise<{ merchantId: string } | null> {
+  const merchant = await getMerchant();
+  if (!merchant) return null;
+  return { merchantId: merchant.id };
 }

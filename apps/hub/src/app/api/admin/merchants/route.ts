@@ -4,12 +4,12 @@ import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { startApplication, stopApplication } from "@/lib/coolify";
 import { stopOpenClaw, startOpenClaw } from "@/lib/openclaw";
-import { checkAdminRequest } from "@/lib/admin-auth";
+import { checkAdminRequestOrSession } from "@/lib/admin-auth";
 import { getStripe } from "@/lib/stripe";
 
 // GET /api/admin/merchants — list all merchants (excludes sensitive fields)
 export async function GET(request: Request) {
-  if (!checkAdminRequest(request)) {
+  if (!(await checkAdminRequestOrSession(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -42,7 +42,7 @@ const ACTION_MAP: Record<string, { fn: (uuid: string) => Promise<void>; status: 
 
 // PATCH /api/admin/merchants — update merchant status
 export async function PATCH(request: Request) {
-  if (!checkAdminRequest(request)) {
+  if (!(await checkAdminRequestOrSession(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -123,7 +123,7 @@ export async function PATCH(request: Request) {
 
 // POST /api/admin/merchants — bulk actions (suspend all, maintenance mode)
 export async function POST(request: Request) {
-  if (!checkAdminRequest(request)) {
+  if (!(await checkAdminRequestOrSession(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

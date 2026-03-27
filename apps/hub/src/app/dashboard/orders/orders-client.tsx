@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useClerk } from "@clerk/nextjs";
 import { DashboardNav } from "../dashboard-client";
 
 interface OrderItem {
@@ -85,6 +86,7 @@ export function OrdersClient({
   initialOrders: Order[];
   fetchError: string;
 }) {
+  const { signOut } = useClerk();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [notification, setNotification] = useState<{
     type: "error" | "success";
@@ -129,8 +131,7 @@ export function OrdersClient({
   }
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/";
+    await signOut({ redirectUrl: "/" });
   }
 
   return (

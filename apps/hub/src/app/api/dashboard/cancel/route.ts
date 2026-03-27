@@ -2,22 +2,22 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
-import { getSession } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { stopApplication } from "@/lib/coolify";
 import { stopOpenClaw } from "@/lib/openclaw";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST() {
   try {
-    const session = await getSession();
-    if (!session) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Not logged in" }, { status: 401 });
     }
 
     const [merchant] = await db
       .select()
       .from(merchants)
-      .where(eq(merchants.id, session.merchantId))
+      .where(eq(merchants.clerkId, userId))
       .limit(1);
 
     if (!merchant) {

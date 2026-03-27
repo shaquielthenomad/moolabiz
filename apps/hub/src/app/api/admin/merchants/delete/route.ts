@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { checkAdminRequest } from "@/lib/admin-auth";
+import { checkAdminRequestOrSession } from "@/lib/admin-auth";
 import { stopApplication } from "@/lib/coolify";
 import { removeOpenClaw } from "@/lib/openclaw";
 
 export async function DELETE(request: Request) {
-  if (!checkAdminRequest(request)) {
+  if (!(await checkAdminRequestOrSession(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useClerk } from "@clerk/nextjs";
 
 interface Merchant {
   id: string;
@@ -58,6 +59,7 @@ function formatDate(dateStr: string): string {
 }
 
 export default function AdminDashboardClient({ initialMerchants, initialStats }: Props) {
+  const { signOut } = useClerk();
   const [merchants, setMerchants] = useState<Merchant[]>(initialMerchants);
   const [stats, setStats] = useState<Stats>(initialStats);
   const [activeTab, setActiveTab] = useState<"merchants" | "killswitch">("merchants");
@@ -208,12 +210,12 @@ export default function AdminDashboardClient({ initialMerchants, initialStats }:
         </nav>
 
         <div className="p-4 border-t border-slate-800">
-          <a
-            href="/admin"
+          <button
+            onClick={() => signOut({ redirectUrl: "/" })}
             className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
           >
             Sign out
-          </a>
+          </button>
         </div>
       </aside>
 

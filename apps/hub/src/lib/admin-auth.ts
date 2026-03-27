@@ -1,92 +1,48 @@
-import crypto from "crypto";
-import { cookies } from "next/headers";
+import { auth } from "@clerk/nextjs/server";
 
-const ADMIN_COOKIE = "moolabiz_admin";
-
-function getAdminSecret(): string {
-  const s = process.env.ADMIN_SECRET;
-  if (!s) throw new Error("ADMIN_SECRET env var is required");
-  return s;
-}
-
-function getSigningKey(): string {
-  // Use SESSION_SECRET for HMAC signing, ADMIN_SECRET for password check
-  const s = process.env.SESSION_SECRET;
-  if (!s) throw new Error("SESSION_SECRET env var is required");
-  return s;
-}
-
-export function createAdminToken(): string {
-  const payload = JSON.stringify({
-    role: "admin",
-    exp: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-  });
-  const encoded = Buffer.from(payload).toString("base64url");
-  const sig = crypto
-    .createHmac("sha256", getSigningKey())
-    .update(encoded)
-    .digest("base64url");
-  return `${encoded}.${sig}`;
-}
-
-export function verifyAdminToken(token: string): boolean {
-  try {
-    const [encoded, sig] = token.split(".");
-    if (!encoded || !sig) return false;
-    const expectedBuf = crypto
-      .createHmac("sha256", getSigningKey())
-      .update(encoded)
-      .digest();
-    const sigBuf = Buffer.from(sig, "base64url");
-    if (
-      sigBuf.length !== expectedBuf.length ||
-      !crypto.timingSafeEqual(sigBuf, expectedBuf)
-    ) {
-      return false;
-    }
-    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString());
-    if (payload.exp < Date.now()) return false;
-    if (payload.role !== "admin") return false;
-    return true;
-  } catch {
-    return false;
+/**
+ * Check admin access for API routes.
+ *
+ * Supports two auth methods:
+ * 1. Bearer ADMIN_SECRET header (M2M / server-to-server calls)
+ * 2. Clerk session with admin role (browser-based admin dashboard)
+ */
+export function checkAdminRequest(request: Request): boolean {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader) {
+    const secret = process.env.ADMIN_SECRET;
+    if (secret && authHeader === `Bearer ${secret}`) return true;
   }
-}
-
-export function checkAdminPassword(password: string): boolean {
-  const secret = getAdminSecret();
-  // Compare HMAC-SHA256 digests so both buffers are always the same length,
-  // eliminating the length oracle that raw buffer comparison would leak.
-  const key = "moolabiz-admin-password-check";
-  const a = crypto.createHmac("sha256", key).update(password).digest();
-  const b = crypto.createHmac("sha256", key).update(secret).digest();
-  return crypto.timingSafeEqual(a, b);
-}
-
-export async function checkAdminSession(): Promise<boolean> {
-  const store = await cookies();
-  const token = store.get(ADMIN_COOKIE)?.value;
-  if (!token) return false;
-  return verifyAdminToken(token);
+  // For Clerk-based admin checks in API routes, callers should use
+  // checkAdminSession() instead. This function is kept for M2M compat.
+  return false;
 }
 
 /**
- * Check admin session from a Request object (for API routes).
- * Checks both the cookie and the Authorization header (Bearer token).
+ * Check if the current Clerk user has admin role via session metadata.
+ *
+ * Set the "admin" role on a user in the Clerk dashboard, or via
+ * publicMetadata: { role: "admin" }.
  */
-export function checkAdminRequest(request: Request): boolean {
-  // Check Authorization header (Bearer ADMIN_SECRET)
-  const auth = request.headers.get("authorization");
-  if (auth) {
-    const secret = process.env.ADMIN_SECRET;
-    if (secret && auth === `Bearer ${secret}`) return true;
-  }
+export async function checkAdminSession(): Promise<boolean> {
+  const { sessionClaims } = await auth();
+  if (!sessionClaims) return false;
 
-  // Check cookie
-  const cookieHeader = request.headers.get("cookie") || "";
-  const match = cookieHeader.match(/moolabiz_admin=([^;]+)/);
-  if (!match) return false;
-  return verifyAdminToken(match[1]);
+  // Check publicMetadata.role === "admin" (set in Clerk dashboard)
+  const metadata = sessionClaims.metadata as
+    | { role?: string }
+    | undefined;
+  return metadata?.role === "admin";
 }
 
-export { ADMIN_COOKIE };
+/**
+ * Check admin access for API routes using Clerk session OR Bearer token.
+ */
+export async function checkAdminRequestOrSession(
+  request: Request
+): Promise<boolean> {
+  // First try M2M Bearer token
+  if (checkAdminRequest(request)) return true;
+  // Then try Clerk session
+  return checkAdminSession();
+}

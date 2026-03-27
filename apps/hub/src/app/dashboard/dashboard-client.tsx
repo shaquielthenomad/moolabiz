@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useClerk } from "@clerk/nextjs";
 
 interface MerchantData {
   id: string;
@@ -135,6 +136,7 @@ function DashboardNav({ current }: { current: "overview" | "products" | "orders"
 export { DashboardNav };
 
 export function DashboardClient({ merchant }: { merchant: MerchantData }) {
+  const { signOut } = useClerk();
   const [status, setStatus] = useState(merchant.status);
   const [loading, setLoading] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -164,8 +166,7 @@ export function DashboardClient({ merchant }: { merchant: MerchantData }) {
   }
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/";
+    await signOut({ redirectUrl: "/" });
   }
 
   const memberSince = new Date(merchant.createdAt).toLocaleDateString("en-ZA", {

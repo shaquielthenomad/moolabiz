@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, type FormEvent, type ChangeEvent } from "react";
+import { useClerk } from "@clerk/nextjs";
 import { DashboardNav } from "../dashboard-client";
 
 interface Product {
@@ -45,6 +46,7 @@ export function ProductsClient({
   initialProducts: Product[];
   fetchError: string;
 }) {
+  const { signOut } = useClerk();
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -109,8 +111,7 @@ export function ProductsClient({
   }
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/";
+    await signOut({ redirectUrl: "/" });
   }
 
   return (

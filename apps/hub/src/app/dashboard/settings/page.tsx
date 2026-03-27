@@ -1,21 +1,21 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import SettingsClient from "./settings-client";
 
 export default async function SettingsPage() {
-  const session = await getSession();
-  if (!session) redirect("/login");
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
 
   const [merchant] = await db
     .select()
     .from(merchants)
-    .where(eq(merchants.id, session.merchantId))
+    .where(eq(merchants.clerkId, userId))
     .limit(1);
 
-  if (!merchant) redirect("/login");
+  if (!merchant) redirect("/sign-in");
 
   return (
     <SettingsClient
