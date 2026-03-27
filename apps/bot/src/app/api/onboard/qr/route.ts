@@ -9,12 +9,16 @@ if (!PROVISIONER_KEY) {
 }
 
 /**
- * Gets the WhatsApp QR code from the OpenClaw provisioner.
- * Returns ASCII art QR that the /onboard page renders directly.
+ * Checks WhatsApp connection status from the OpenClaw provisioner.
+ *
+ * The actual QR code is now handled by the Easy Mode overlay in the
+ * control UI at {slug}.bot.moolabiz.shop — it uses the gateway's
+ * WebSocket protocol (web.login.start → qrDataUrl) to render a native
+ * QR image. This endpoint only returns { connected, controlUi }.
  */
 export async function GET() {
   if (!SLUG) {
-    return NextResponse.json({ qr: null, connected: false, error: "Not configured" });
+    return NextResponse.json({ connected: false, controlUi: null, error: "Not configured" });
   }
 
   try {
@@ -29,12 +33,12 @@ export async function GET() {
     });
 
     if (!res.ok) {
-      return NextResponse.json({ qr: null, connected: false });
+      return NextResponse.json({ connected: false, controlUi: `https://${SLUG}.bot.moolabiz.shop` });
     }
 
     const data = await res.json();
     return NextResponse.json(data);
   } catch {
-    return NextResponse.json({ qr: null, connected: false });
+    return NextResponse.json({ connected: false, controlUi: `https://${SLUG}.bot.moolabiz.shop` });
   }
 }
