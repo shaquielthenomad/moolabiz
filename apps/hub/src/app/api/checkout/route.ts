@@ -102,18 +102,30 @@ export async function POST(request: Request) {
     const whatsappAppSecret = crypto.randomBytes(32).toString("hex");
 
     // Insert merchant as pending
-    const [merchant] = await db.insert(merchants).values({
-      businessName,
-      email,
-      slug,
-      whatsappNumber,
-      paymentProvider,
-      plan: planId,
-      status: "pending",
-      subdomain: `${slug}.bot.moolabiz.shop`,
-      whatsappVerifyToken,
-      whatsappAppSecret,
-    }).returning();
+    let merchant;
+    try {
+      [merchant] = await db.insert(merchants).values({
+        businessName,
+        email,
+        slug,
+        whatsappNumber,
+        paymentProvider,
+        plan: planId,
+        status: "pending",
+        subdomain: `${slug}.bot.moolabiz.shop`,
+        whatsappVerifyToken,
+        whatsappAppSecret,
+      }).returning();
+    } catch (insertErr: unknown) {
+      const pgErr = insertErr as { code?: string };
+      if (pgErr.code === "23505") {
+        return NextResponse.json(
+          { success: false, error: "A store with a similar name already exists. Try adding your area or a unique word." } satisfies CheckoutResponse,
+          { status: 409 }
+        );
+      }
+      throw insertErr;
+    }
 
     // Get Stripe price ID for this plan and currency
     const stripePriceId = getStripePriceId(planId, currency as SupportedCurrency);

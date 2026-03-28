@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import crypto from "crypto";
 
 /**
  * Check admin access for API routes.
@@ -11,7 +12,11 @@ export function checkAdminRequest(request: Request): boolean {
   const authHeader = request.headers.get("authorization");
   if (authHeader) {
     const secret = process.env.ADMIN_SECRET;
-    if (secret && authHeader === `Bearer ${secret}`) return true;
+    const expected = `Bearer ${secret}`;
+    if (secret && authHeader && authHeader.length === expected.length &&
+        crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))) {
+      return true;
+    }
   }
   // For Clerk-based admin checks in API routes, callers should use
   // checkAdminSession() instead. This function is kept for M2M compat.

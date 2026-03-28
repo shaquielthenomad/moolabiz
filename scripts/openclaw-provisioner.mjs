@@ -36,6 +36,15 @@ const TEMPLATES_DIR = process.env.TEMPLATES_DIR || "/data/moolabiz-templates";
 /** Directory containing the MoolaBiz control UI theme */
 const THEME_DIR = "/data/moolabiz-theme";
 
+/** Azure OpenAI config */
+const AZURE_OPENAI_BASE_URL = process.env.AZURE_OPENAI_BASE_URL || "https://moolabiz-ai.openai.azure.com/openai/deployments/gpt-4o-mini";
+const AZURE_MODEL_ID = "gpt-4o-mini";
+
+/** Truncate a string to a maximum length. */
+function truncate(str, max) {
+  return typeof str === "string" && str.length > max ? str.slice(0, max) : (str || "");
+}
+
 /** Auto-pick a signature emoji based on business type. */
 function emojiForBusinessType(type) {
   const map = {
@@ -84,19 +93,17 @@ function renderTemplates(vars) {
 /** Promise wrapper for execFile with a timeout. Returns { stdout, stderr }. No shell. */
 function execFileAsync(file, args, timeoutMs = 12000) {
   return new Promise((resolve, reject) => {
+    const killTimer = setTimeout(() => {
+      try { child.kill("SIGKILL"); } catch { /* already dead */ }
+    }, timeoutMs + 2000);
     const child = execFile(file, args, { timeout: timeoutMs }, (err, stdout, stderr) => {
+      clearTimeout(killTimer);
       if (err) {
-        // On timeout or non-zero exit, still return whatever output we got
         resolve({ stdout: stdout || "", stderr: stderr || "", err });
       } else {
         resolve({ stdout, stderr, err: null });
       }
     });
-    // Belt-and-suspenders: kill the child after timeoutMs+2s so docker exec
-    // orphan processes don't linger and block the event loop via SIGTERM ignore.
-    setTimeout(() => {
-      try { child.kill("SIGKILL"); } catch { /* already dead */ }
-    }, timeoutMs + 2000);
   });
 }
 
@@ -104,6 +111,9 @@ const AUTH_KEY = process.env.PROVISIONER_KEY;
 if (!AUTH_KEY) {
   console.error("[openclaw-provisioner] PROVISIONER_KEY env var is required");
   process.exit(1);
+}
+if (!process.env.AZURE_OPENAI_API_KEY) {
+  console.warn("[openclaw-provisioner] WARNING: AZURE_OPENAI_API_KEY not set — deployed containers will fail LLM calls");
 }
 const PORT = 9999;
 
@@ -116,13 +126,28 @@ const PORT = 9999;
 const connectedCache = new Map();
 
 /** Read full request body as a string. */
-function readBody(req) {
+function readBody(req, maxBytes = 65536) {
   return new Promise((resolve, reject) => {
     let body = "";
-    req.on("data", (chunk) => (body += chunk));
+    req.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > maxBytes) {
+        req.destroy(new Error("Request body too large"));
+      }
+    });
     req.on("end", () => resolve(body));
     req.on("error", reject);
   });
+}
+
+/** Parse JSON body safely. Returns [data, null] on success or sends 400 and returns [null, true]. */
+async function parseBody(req, res) {
+  try {
+    return [JSON.parse(await readBody(req)), null];
+  } catch {
+    json(res, 400, { error: "Invalid JSON body" });
+    return [null, true];
+  }
 }
 
 /** Sanitise a slug to alphanumeric + hyphens only. */
@@ -148,13 +173,14 @@ function json(res, status, data) {
 // ─── Route handlers ────────────────────────────────────────────────
 
 async function handleDeploy(req, res) {
-  const body = await readBody(req);
+  const [body, err] = await parseBody(req, res);
+  if (err) return;
   const {
     slug, businessName, ownerPhone, apiSecret, vendureChannelToken,
     // Optional fields the Hub can pass from signup data
     ownerName, businessType, timezone, paymentMethods, deliveryOptions,
     businessHours, faqs,
-  } = JSON.parse(body);
+  } = body;
   let s;
   try {
     s = sanitizeSlug(slug);
@@ -167,19 +193,19 @@ async function handleDeploy(req, res) {
 
   // Build template variable map
   const templateVars = {
-    BUSINESS_NAME: businessName || slug,
-    OWNER_NAME: ownerName || businessName || slug,
-    OWNER_PHONE: ownerPhone || "",
+    BUSINESS_NAME: truncate(businessName || slug, 100),
+    OWNER_NAME: truncate(ownerName || businessName || slug, 100),
+    OWNER_PHONE: truncate(ownerPhone || "", 20),
     BUSINESS_TYPE: resolvedBusinessType,
     BOT_NAME: `${businessName || slug}'s Bot`,
     EMOJI: emojiForBusinessType(resolvedBusinessType),
     TIMEZONE: timezone || "Africa/Johannesburg",
     SIGNUP_DATE: new Date().toISOString().split("T")[0],
     PREFERRED_LANGUAGE: "en",
-    PAYMENT_METHODS: paymentMethods || "Cash, EFT",
-    DELIVERY_OPTIONS: deliveryOptions || "Collection",
-    BUSINESS_HOURS: businessHours || "Mon-Fri 08:00-17:00",
-    FAQS: faqs || "",
+    PAYMENT_METHODS: truncate(paymentMethods || "Cash, EFT", 200),
+    DELIVERY_OPTIONS: truncate(deliveryOptions || "Collection", 200),
+    BUSINESS_HOURS: truncate(businessHours || "Mon-Fri 08:00-17:00", 200),
+    FAQS: truncate(faqs || "", 1000),
     BIZSLUG: s,
     BUSINESS_SLUG: s,
     BOT_PHONE: "",  // Not known at deploy time — filled post-WhatsApp-link
@@ -205,19 +231,20 @@ async function handleDeploy(req, res) {
       },
       agents: {
         defaults: {
-          model: "groq/llama-3.3-70b-versatile",
+          model: { primary: `azure-openai/${AZURE_MODEL_ID}` },
           timeoutSeconds: 300,
           workspace: `/root/.openclaw-${s}/workspace`,
         },
       },
       models: {
+        mode: "merge",
         providers: {
-          groq: {
-            baseUrl: "https://api.groq.com/openai/v1",
+          "azure-openai": {
+            baseUrl: AZURE_OPENAI_BASE_URL,
+            apiKey: "${AZURE_OPENAI_API_KEY}",
             api: "openai-completions",
-            apiKey: process.env.GROQ_API_KEY || "",
             models: [
-              { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", reasoning: false, input: ["text"], contextWindow: 128000, maxTokens: 4096 }
+              { id: AZURE_MODEL_ID, name: "GPT-4o mini (Azure SA)", reasoning: false, input: ["text", "image"], contextWindow: 128000, maxTokens: 16384 }
             ],
           },
         },
@@ -362,7 +389,7 @@ On success: "Payment key saved! Customers can now pay online."
   ];
   if (apiSecret) args.push("--env", `API_SECRET=${apiSecret}`);
   if (ownerPhone) args.push("--env", `OWNER_PHONE=${ownerPhone}`);
-  if (process.env.GROQ_API_KEY) args.push("--env", `GROQ_API_KEY=${process.env.GROQ_API_KEY}`);
+  if (process.env.AZURE_OPENAI_API_KEY) args.push("--env", `AZURE_OPENAI_API_KEY=${process.env.AZURE_OPENAI_API_KEY}`);
   args.push("moolabiz/openclaw:latest");
   // Bind to 0.0.0.0 so Traefik can route traffic to the gateway's control UI
   args.push("--profile", s, "gateway", "--port", "18789", "--bind", "0.0.0.0", "--allow-unconfigured");
@@ -374,25 +401,25 @@ On success: "Payment key saved! Customers can now pay online."
   // OpenClaw reads from /root/.openclaw/workspace-{slug}/ not /root/.openclaw-{slug}/workspace/
   setTimeout(() => {
     try {
-      execFileSync("docker", ["exec", `openclaw-${s}`, "bash", "-c",
-        `mkdir -p /root/.openclaw/workspace-${s}/skills && ` +
-        `cp /root/.openclaw-${s}/workspace/*.md /root/.openclaw/workspace-${s}/ && ` +
-        `cp -r /root/.openclaw-${s}/workspace/skills/* /root/.openclaw/workspace-${s}/skills/ 2>/dev/null || true`
-      ], { timeout: 10000 });
+      const container = `openclaw-${s}`;
+      execFileSync("docker", ["exec", container, "mkdir", "-p", `/root/.openclaw/workspace-${s}/skills`], { timeout: 10000 });
+      execFileSync("docker", ["exec", container, "sh", "-c",
+        `cp /root/.openclaw-${s}/workspace/*.md /root/.openclaw/workspace-${s}/`], { timeout: 10000 });
+      try {
+        execFileSync("docker", ["exec", container, "sh", "-c",
+          `cp -r /root/.openclaw-${s}/workspace/skills/* /root/.openclaw/workspace-${s}/skills/`], { timeout: 10000 });
+      } catch { /* skills dir may not exist */ }
       console.log(`[provisioner] copied workspace files for ${s}`);
     } catch(e) { console.error(`[provisioner] workspace copy failed:`, e.message); }
   }, 5000);
-
-  // No need to auto-trigger WhatsApp login here — the Easy Mode overlay
-  // in the control UI handles QR generation natively via WebSocket
-  // (web.login.start → qrDataUrl → web.login.wait). The merchant simply
-  // visits {slug}.bot.moolabiz.shop and scans the QR from there.
 
   json(res, 200, { containerId, slug: s, controlUi: `https://${traefikHost}` });
 }
 
 async function handleStop(req, res) {
-  const { slug } = JSON.parse(await readBody(req));
+  const [body, err] = await parseBody(req, res);
+  if (err) return;
+  const { slug } = body;
   const s = sanitizeSlug(slug);
   try {
     execFileSync("docker", ["stop", `openclaw-${s}`], { stdio: "ignore" });
@@ -402,7 +429,9 @@ async function handleStop(req, res) {
 }
 
 async function handleStart(req, res) {
-  const { slug } = JSON.parse(await readBody(req));
+  const [body, err] = await parseBody(req, res);
+  if (err) return;
+  const { slug } = body;
   const s = sanitizeSlug(slug);
   try {
     execFileSync("docker", ["start", `openclaw-${s}`], { stdio: "ignore" });
@@ -412,17 +441,22 @@ async function handleStart(req, res) {
 }
 
 async function handleRemove(req, res) {
-  const { slug } = JSON.parse(await readBody(req));
+  const [body, err] = await parseBody(req, res);
+  if (err) return;
+  const { slug } = body;
   const s = sanitizeSlug(slug);
   try {
     execFileSync("docker", ["rm", "-f", `openclaw-${s}`], { stdio: "ignore" });
   } catch { /* container may not exist */ }
+  connectedCache.delete(s);
   console.log(`[provisioner] removed openclaw-${s}`);
   json(res, 200, { ok: true });
 }
 
 async function handleStatus(req, res) {
-  const { slug } = JSON.parse(await readBody(req));
+  const [body, err] = await parseBody(req, res);
+  if (err) return;
+  const { slug } = body;
   const s = sanitizeSlug(slug);
   try {
     const state = execFileSync(
@@ -450,7 +484,9 @@ async function handleStatus(req, res) {
  * dashboard to poll connection status.
  */
 async function handleQR(req, res) {
-  const { slug } = JSON.parse(await readBody(req));
+  const [body, err] = await parseBody(req, res);
+  if (err) return;
+  const { slug } = body;
   const s = sanitizeSlug(slug);
 
   // Fast path: check in-memory cache first

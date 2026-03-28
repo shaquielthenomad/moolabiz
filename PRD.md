@@ -1,7 +1,7 @@
 # MoolaBiz -- Product Requirements Document
 
-**Version:** 1.0
-**Date:** 2026-03-21
+**Version:** 1.1
+**Date:** 2026-03-28
 **Author:** Generated from codebase analysis
 **Branch:** `Vendure-implementation`
 
@@ -13,7 +13,7 @@ MoolaBiz is a SaaS platform that turns a merchant's WhatsApp number into a fully
 
 **The problem:** South Africa has millions of informal sellers who take orders via WhatsApp, manually track stock in their heads, lose orders in chat threads, and have no way to accept digital payments. They earn R3K-R15K/month and cannot afford enterprise e-commerce solutions, nor do they have the technical skills to set one up.
 
-**The solution:** MoolaBiz gives each merchant a WhatsApp bot (powered by OpenClaw + Groq AI) and a web storefront (powered by Vendure), provisioned automatically in under 10 minutes. The merchant's existing WhatsApp number becomes a 24/7 store where customers can browse products, add to cart, and pay. The merchant manages everything through WhatsApp commands or a web dashboard -- no coding, no app downloads, no tech skills required.
+**The solution:** MoolaBiz gives each merchant a WhatsApp bot (powered by OpenClaw + Azure OpenAI GPT-4o-mini) and a web storefront (powered by Vendure), provisioned automatically in under 10 minutes. The merchant's existing WhatsApp number becomes a 24/7 store where customers can browse products, add to cart, and pay. The merchant manages everything through WhatsApp commands or a web dashboard -- no coding, no app downloads, no tech skills required.
 
 **Core value proposition:** "Your WhatsApp store. Always open."
 
@@ -90,8 +90,9 @@ WhatsApp has 95%+ penetration in South Africa. These sellers and their customers
           |                     |
           | - WhatsApp bot      |
           |   (Baileys/QR)      |
-          | - Groq LLM          |
-          |   (llama-3.3-70b)   |
+          | - Azure OpenAI      |
+          |   (GPT-4o-mini,     |
+          |    SA North region) |
           | - SOUL.md persona   |
           | - Catalog skill     |
           |   (curl -> bridge)  |
@@ -107,7 +108,7 @@ WhatsApp has 95%+ penetration in South Africa. These sellers and their customers
 | **Vendure Server** | Vendure 3.x, PostgreSQL, Stripe Plugin | Coolify container | Headless e-commerce engine (products, orders, payments) |
 | **Vendure Storefront** | Next.js (Vendure template) | Coolify container | Shared multi-tenant web storefront |
 | **OpenClaw Provisioner** | Node.js 22, Docker socket | Docker container | Deploys/manages per-merchant OpenClaw bots |
-| **OpenClaw (per merchant)** | OpenClaw CLI, Groq AI | Docker container (dynamic) | WhatsApp bot, AI chat, catalog commands |
+| **OpenClaw (per merchant)** | OpenClaw CLI, Azure OpenAI GPT-4o-mini | Docker container (dynamic) | WhatsApp bot, AI chat (text + images), catalog commands; Easy Mode UI provides branded WhatsApp QR onboarding |
 | **PostgreSQL (Hub)** | PostgreSQL | Coolify managed | Merchant records, webhook events |
 | **PostgreSQL (Vendure)** | PostgreSQL | Coolify managed | Products, orders, channels, assets |
 
@@ -135,7 +136,7 @@ WhatsApp has 95%+ penetration in South Africa. These sellers and their customers
 | **Stripe checkout** | Subscription billing via Stripe, multi-currency price IDs | Shipped |
 | **Merchant provisioning** | Automatic: create Vendure channel + seller, deploy OpenClaw container | Shipped |
 | **Vendure multi-tenant channels** | Each merchant gets isolated channel with unique token | Shipped |
-| **WhatsApp bot (OpenClaw)** | Per-merchant bot with AI persona (SOUL.md), Groq-powered | Shipped |
+| **WhatsApp bot (OpenClaw)** | Per-merchant bot with AI persona (SOUL.md), Azure OpenAI GPT-4o-mini powered, multimodal (text + images) | Shipped |
 | **WhatsApp QR onboarding** | ASCII QR code at /onboard endpoint for WhatsApp linking | Shipped |
 | **Web storefront** | Shared Next.js storefront, multi-tenant via subdomain middleware | Shipped |
 | **Vendure bridge API** | REST endpoints for products/orders CRUD, authenticated via API secret | Shipped |
@@ -146,7 +147,10 @@ WhatsApp has 95%+ penetration in South Africa. These sellers and their customers
 | **SOUL.md generation** | Per-merchant AI persona with strict guardrails (no off-topic, no prompt leaking) | Shipped |
 | **Bot container lifecycle** | Deploy, start, stop, remove, status via provisioner API | Shipped |
 | **Welcome email** | Sent via Resend after payment confirmation | Shipped |
-| **Session auth (PIN)** | HMAC-based session tokens, bcrypt PIN hashing | Shipped |
+| **Clerk authentication** | Email + Google OAuth via Clerk; phone-first OTP planned; bcryptjs PIN auth removed | Shipped |
+| **Easy Mode branded control UI** | MoolaBiz-themed OpenClaw control panel with QR onboarding flow and i18n support | Shipped |
+| **Merchant workspace templates** | Auto-generated SOUL.md, AGENTS.md, and related workspace files per merchant on provisioning | Shipped |
+| **Azure OpenAI multimodal support** | GPT-4o-mini on Azure SA North; supports both text and image inputs from WhatsApp | Shipped |
 | **Privacy policy** | POPIA-compliant privacy page | Shipped |
 | **Health endpoint** | /api/health for container health checks | Shipped |
 | **Migration script** | migrate-to-vendure.mjs for existing merchants | Shipped |
@@ -157,9 +161,11 @@ WhatsApp has 95%+ penetration in South Africa. These sellers and their customers
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **Storefront checkout** | Vendure Stripe plugin configured but end-to-end customer payment flow needs testing | In Progress |
-| **Multi-language bot** | SOUL.md mentions 5 languages; Groq model supports it but not formally tested | In Progress |
-| **Plan change** | "Change plan -- coming soon" button exists in dashboard, not wired | Planned |
-| **Settings page** | Nav tab exists, page likely minimal | In Progress |
+| **Multi-language bot** | SOUL.md mentions 5 languages; GPT-4o-mini supports it but not formally tested end-to-end | In Progress |
+| **Plan change** | "Change plan -- coming soon" button exists in dashboard, not wired | In Progress |
+| **Settings page** | Nav tab exists; settings configurable via dashboard need scoping | In Progress |
+| **Phone-first OTP auth** | Clerk phone OTP for WhatsApp-native onboarding; planned but not yet implemented | In Progress |
+| **Pricing restructure** | Market research recommends R79/R199/R399 with free tier; code still reflects old pricing; migration and Stripe Price ID update in progress | In Progress |
 
 ### Planned (Not Yet Built)
 
@@ -183,12 +189,23 @@ WhatsApp has 95%+ penetration in South Africa. These sellers and their customers
 
 ### Current Plan Structure
 
+> **Note: Pricing restructure is planned.** Market research (2026-03-18) recommended moving to R79/R199/R399 with a free tier. The table below reflects the current code; the restructure has not yet been applied to Stripe Price IDs or the landing page.
+
 | Plan | ZAR | USD | THB | Key Features |
 |------|-----|-----|-----|-------------|
 | **Intro** | R49.99/mo | $2.99/mo | B99/mo | WhatsApp bot, web storefront, order taking, 1 payment provider, English + 1 language, email support |
 | **Growth** (Popular) | R149/mo | $8.99/mo | B299/mo | All languages, all payment providers, appointment booking, daily revenue reports, WhatsApp support |
 | **Pro** | R299/mo | $16.99/mo | B579/mo | AI business advisor, priority support, custom bot personality, advanced analytics |
 | **Business** | R499/mo | $27.99/mo | B949/mo | Dedicated support, multiple WhatsApp numbers, custom integrations, SLA guarantee |
+
+### Recommended Plan Structure (Pending Implementation)
+
+| Plan | ZAR | Key Changes |
+|------|-----|-------------|
+| **Free / Hustler** | R0/mo | 50 conversations, 20 orders, MoolaBiz branding; trust-building for informal traders |
+| **Starter** | R79/mo | Replaces Intro; more accessible entry point |
+| **Growth** | R199/mo | Replaces current Growth tier |
+| **Pro** | R399/mo | Combines current Pro + Business |
 
 ### Stripe Integration Details
 
@@ -201,7 +218,7 @@ WhatsApp has 95%+ penetration in South Africa. These sellers and their customers
 
 ### Pricing History Note
 
-Market research (2026-03-18) recommended a restructure to R79/R199/R399 with a free tier. The current code reflects a different structure (R49.99/R149/R299/R499) that was implemented before the latest pricing research. The free tier has not been implemented.
+Market research (2026-03-18) recommended a restructure to R79/R199/R399 with a free tier. The current code reflects a different structure (R49.99/R149/R299/R499) that was implemented before the latest pricing research. The free tier has not been implemented. The full pricing restructure — including new Stripe Price IDs, landing page updates, and free tier provisioning logic — is planned but not yet shipped.
 
 ---
 
@@ -216,10 +233,11 @@ They see the hero ("Your WhatsApp store. Always open."), the 3-step how-it-works
 ### Step 3: Signup Form
 They click "Start selling" and fill in:
 - Business name (e.g., "Mama Grace Bakes")
-- Email address
+- Email address (used for Clerk account creation)
 - WhatsApp number (pre-filled with +27 for SA)
 - Preferred payment provider (Yoco / Ozow / PayFast)
-- 4-digit PIN (for dashboard login)
+
+Authentication is handled by Clerk (email + Google OAuth). The previous 4-digit PIN system has been removed.
 
 ### Step 4: Plan Selection
 They choose a plan. A currency switcher lets them view prices in ZAR, USD, or THB.
@@ -233,9 +251,10 @@ On payment success, the merchant is redirected to `/setup-complete?slug={slug}`.
 2. Create Vendure channel (isolated product catalog for this merchant)
 3. Create Vendure seller (assign to channel)
 4. Generate API secret
-5. Deploy OpenClaw container (WhatsApp bot with SOUL.md, Groq AI, catalog skill)
-6. Set merchant status to "active"
-7. Send welcome email via Resend
+5. Generate merchant workspace templates (SOUL.md, AGENTS.md, etc.)
+6. Deploy OpenClaw container (WhatsApp bot with workspace templates, Azure OpenAI GPT-4o-mini, catalog skill; Easy Mode branded UI)
+7. Set merchant status to "active"
+8. Send welcome email via Resend
 
 ### Step 7: WhatsApp Connection
 From the dashboard, the merchant clicks "Connect WhatsApp" which opens `{slug}.bot.moolabiz.shop/onboard`. An ASCII QR code is displayed. They scan it with their WhatsApp, linking their number to the bot.
@@ -354,6 +373,35 @@ The merchant uses the dashboard at `moolabiz.shop/dashboard` to view orders, man
 - Authenticated via API secret (Bearer token)
 - Exec approvals auto-configured so curl doesn't need manual approval in OpenClaw
 
+### 2026-03-28 -- Groq → Azure OpenAI, Clerk Auth, Security Audit, Easy Mode UI
+**Decision:** Multiple infrastructure and security pivots:
+
+**LLM: Groq → Azure OpenAI GPT-4o-mini (SA North)**
+- Groq free tier retired; replaced with Azure OpenAI GPT-4o-mini deployed in the Azure South Africa North region
+- Funded by $5,000 Microsoft for Startups sponsorship credit
+- Adds multimodal support: bot can now accept and respond to image inputs from WhatsApp (product photos, receipts, etc.)
+- Lower latency for SA users due to regional deployment; no cold-start issues
+
+**Auth: bcrypt PIN → Clerk**
+- The custom HMAC session token + bcrypt PIN system has been fully removed
+- `bcryptjs` dependency dropped from the codebase
+- Clerk now handles all authentication: email/password and Google OAuth
+- Phone-first OTP (for WhatsApp-native merchants) is planned as the next Clerk integration
+
+**Security Audit: 10 issues resolved (CRIT-1 through LOW-1)**
+- Full security pass completed; issues addressed spanned authentication weaknesses, input validation gaps, rate limiting, PII exposure on order endpoints, and token handling
+- Critical items patched before further merchant onboarding
+
+**Easy Mode Branded Control UI deployed**
+- OpenClaw's Easy Mode UI has been themed with the MoolaBiz brand (colors, logo, copy)
+- QR onboarding flow integrated directly into the control panel
+- i18n scaffolding added for South African language support
+
+**Merchant workspace templates automated**
+- SOUL.md (AI persona), AGENTS.md, and supporting workspace files are now fully auto-generated per merchant at provisioning time
+- Templates encode brand voice, product catalog guardrails, admin command set, and language preferences
+- No manual file editing required for new merchant deployments
+
 ---
 
 ## 8. Technical Debt & Known Issues
@@ -396,6 +444,12 @@ The merchant uses the dashboard at `moolabiz.shop/dashboard` to view orders, man
 
 16. **Settings page navigation tab exists but page implementation unknown:** The dashboard nav includes "Settings" but it's unclear what settings are configurable.
 
+### Resolved (as of 2026-03-28)
+
+- **~~Session auth: HMAC + bcrypt PIN~~** -- Replaced by Clerk (email + Google OAuth). `bcryptjs` dependency removed. PIN-based login is gone; Clerk handles all session management. (Was items from the security audit, fixed under CRIT-1 through LOW-1.)
+- **~~Provisioning via Coolify API~~** -- Replaced by direct Docker socket access via the custom OpenClaw provisioner. Coolify API was unreliable and caused deployment failures. Now bypassed entirely for bot containers.
+- **Security audit: 10 issues fixed (CRIT-1 through LOW-1)** -- Full security pass completed 2026-03-28. Issues spanned auth, input validation, rate limiting, PII exposure, and token handling.
+
 ---
 
 ## 9. Launch Requirements
@@ -409,7 +463,7 @@ For a credible Monday launch, the following must be true:
 - [ ] **Product management works:** Add/edit/delete products via dashboard AND via WhatsApp commands
 - [ ] **Web storefront loads:** `{slug}.store.moolabiz.shop` shows merchant's products from Vendure
 - [ ] **Vendure server is deployed and reachable:** Admin API and Shop API accessible from Hub and Storefront
-- [ ] **Environment variables are set:** Stripe keys, Vendure credentials, provisioner key, Groq API key, Resend API key
+- [ ] **Environment variables are set:** Stripe keys, Vendure credentials, provisioner key, Azure OpenAI endpoint + API key (SA North), Clerk publishable + secret keys, Resend API key
 - [ ] **DNS is configured:** `moolabiz.shop`, `*.bot.moolabiz.shop`, `*.store.moolabiz.shop`, `store.moolabiz.shop` all resolve correctly
 - [ ] **SSL certificates are active:** All domains have valid HTTPS via Traefik/Let's Encrypt
 - [ ] **Stripe webhooks are configured:** `checkout.session.completed` and subscription lifecycle events
@@ -479,7 +533,7 @@ For a credible Monday launch, the following must be true:
 | whatsapp_number | text | Unique, intl format |
 | email | text | Optional |
 | payment_provider | text | yoco/ozow/payfast |
-| pin | text | bcrypt hashed |
+| pin | text | REMOVED -- bcryptjs PIN auth replaced by Clerk |
 | plan | text | intro/growth/pro/business |
 | status | text | pending -> provisioning -> active -> suspended -> cancelled |
 | coolify_app_uuid | text | DEAD -- remnant from Coolify provisioning |
@@ -508,4 +562,4 @@ For a credible Monday launch, the following must be true:
 
 ---
 
-*This document reflects the state of the MoolaBiz codebase as of 2026-03-21 on the `Vendure-implementation` branch.*
+*This document reflects the state of the MoolaBiz codebase as of 2026-03-28 on the `Vendure-implementation` branch. Version 1.1.*

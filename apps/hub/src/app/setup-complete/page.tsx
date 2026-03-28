@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -99,6 +100,7 @@ function WhatsAppIcon({ className }: { className?: string }) {
 /* ── Main Content ─────────────────────────────────────────────────────────── */
 
 function SetupContent() {
+  const { isLoaded, isSignedIn } = useAuth();
   const params = useSearchParams();
   const slug = params.get("slug") || "your-business";
   const sessionId = params.get("session_id") || "";
@@ -107,7 +109,18 @@ function SetupContent() {
   const [status, setStatus] = useState<ProvisionStatus>("loading");
   const [error, setError] = useState("");
 
+  // Redirect unauthenticated merchants to sign-up, preserving query params
+  // so they return here after creating their Clerk account.
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      const returnUrl = `/setup-complete?slug=${encodeURIComponent(slug)}&session_id=${encodeURIComponent(sessionId)}`;
+      window.location.href = `/sign-up?redirect_url=${encodeURIComponent(returnUrl)}`;
+    }
+  }, [isLoaded, isSignedIn, slug, sessionId]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
     if (slug === "your-business") return;
     if (!sessionId) {
       setError("Missing payment session. Please complete checkout first.");
@@ -145,7 +158,7 @@ function SetupContent() {
     }
 
     triggerProvision();
-  }, [slug, sessionId]);
+  }, [isLoaded, isSignedIn, slug, sessionId]);
 
   const timelineSteps: Step[] = [
     {

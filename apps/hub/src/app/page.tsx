@@ -360,7 +360,7 @@ export default function Home() {
               {
                 title: "Multiple languages",
                 description:
-                  "Your store speaks English, Zulu, Xhosa, Sotho, and Afrikaans. Reach customers in the language they&apos;re most comfortable with.",
+                  "Your store speaks English, Zulu, Xhosa, Sotho, and Afrikaans. Reach customers in the language they're most comfortable with.",
                 icon: (
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802" />
@@ -370,7 +370,7 @@ export default function Home() {
               {
                 title: "Order management",
                 description:
-                  "See all incoming orders in a clean dashboard. Update order status, manage your product list, and track what&apos;s selling.",
+                  "See all incoming orders in a clean dashboard. Update order status, manage your product list, and track what's selling.",
                 icon: (
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -396,10 +396,9 @@ export default function Home() {
                   {feature.icon}
                 </div>
                 <h3 className="font-semibold text-slate-900 text-base mb-2">{feature.title}</h3>
-                <p
-                  className="text-sm text-slate-500 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: feature.description }}
-                />
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
