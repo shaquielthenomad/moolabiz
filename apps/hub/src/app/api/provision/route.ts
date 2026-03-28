@@ -6,6 +6,7 @@ import {
   setEnvironmentVariables,
   deployApplication,
 } from "@/lib/coolify";
+import { checkAdminRequest } from "@/lib/admin-auth";
 import type { ProvisionResponse } from "@/lib/types";
 
 const provisionSchema = z.object({
@@ -61,21 +62,19 @@ function slugify(name: string): string {
 
 export async function POST(request: Request) {
   try {
+    // Admin-only: require ADMIN_SECRET (timing-safe comparison)
+    if (!checkAdminRequest(request)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" } satisfies ProvisionResponse,
+        { status: 401 }
+      );
+    }
+
     const clientIp = request.headers.get("x-forwarded-for") || "unknown";
     if (isRateLimited(clientIp)) {
       return NextResponse.json(
         { success: false, error: "Too many requests. Try again later." } satisfies ProvisionResponse,
         { status: 429 }
-      );
-    }
-
-    // Admin-only: require ADMIN_SECRET
-    const adminSecret = process.env.ADMIN_SECRET;
-    const auth = request.headers.get("authorization");
-    if (!adminSecret || auth !== `Bearer ${adminSecret}`) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" } satisfies ProvisionResponse,
-        { status: 401 }
       );
     }
 

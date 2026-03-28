@@ -102,9 +102,9 @@ export async function POST(request: Request) {
     const whatsappAppSecret = crypto.randomBytes(32).toString("hex");
 
     // Insert merchant as pending
-    let merchant;
+    let merchant: typeof merchants.$inferSelect;
     try {
-      [merchant] = await db.insert(merchants).values({
+      const [inserted] = await db.insert(merchants).values({
         businessName,
         email,
         slug,
@@ -116,6 +116,8 @@ export async function POST(request: Request) {
         whatsappVerifyToken,
         whatsappAppSecret,
       }).returning();
+      if (!inserted) throw new Error("Insert returned no rows");
+      merchant = inserted;
     } catch (insertErr: unknown) {
       const pgErr = insertErr as { code?: string };
       if (pgErr.code === "23505") {
