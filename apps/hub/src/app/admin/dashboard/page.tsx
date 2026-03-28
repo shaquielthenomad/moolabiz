@@ -27,7 +27,7 @@ export default async function AdminDashboardPage() {
       paymentProvider: merchants.paymentProvider,
       plan: merchants.plan,
       status: merchants.status,
-      coolifyAppUuid: merchants.coolifyAppUuid,
+      openclawContainerId: merchants.openclawContainerId,
       subdomain: merchants.subdomain,
       createdAt: merchants.createdAt,
       updatedAt: merchants.updatedAt,

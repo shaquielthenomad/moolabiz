@@ -3,7 +3,6 @@ export interface SignupFormData {
   email: string;
   whatsappNumber: string;
   paymentProvider: "yoco" | "ozow" | "payfast";
-  pin: string;
 }
 
 export interface ProvisionResponse {
@@ -19,15 +18,7 @@ export interface CheckoutResponse {
   error?: string;
 }
 
-export interface CoolifyApplication {
-  uuid: string;
-  name: string;
-  fqdn: string;
-  description: string;
-  status: string;
-}
-
-export type PlanType = "intro" | "growth" | "pro" | "business";
+export type PlanType = "solopreneur" | "business";
 
 export type SupportedCurrency = "zar" | "usd" | "thb";
 
@@ -42,4 +33,6 @@ export interface Plan {
   priceDisplays: Record<SupportedCurrency, string>;
   features: string[];
   popular?: boolean;
+  /** Maximum number of products allowed. null = unlimited. */
+  maxProducts: number | null;
 }

@@ -7,22 +7,26 @@ function getStripe(): Stripe {
   return new Stripe(key);
 }
 
-// Map plan IDs + currency to Stripe price IDs
-const STRIPE_PRICES: Record<string, Record<SupportedCurrency, string>> = {
-  intro: {
-    zar: process.env.STRIPE_PRICE_INTRO_ZAR || "price_1TCNCkLjaM3mxti1g2BLXMjQ",
-    usd: process.env.STRIPE_PRICE_INTRO_USD || "price_1TCTVHLjaM3mxti1EyLX3NUO",
-    thb: process.env.STRIPE_PRICE_INTRO_THB || "price_1TCTVKLjaM3mxti17ldJZBXR",
-  },
-  growth: {
-    zar: process.env.STRIPE_PRICE_GROWTH_ZAR || "price_1TCND3LjaM3mxti1qJIVl4oe",
-    usd: process.env.STRIPE_PRICE_GROWTH_USD || "price_1TCTVcLjaM3mxti1my4RKXMa",
-    thb: process.env.STRIPE_PRICE_GROWTH_THB || "price_1TCTVeLjaM3mxti1cPhTJnbE",
-  },
-  pro: {
-    zar: process.env.STRIPE_PRICE_PRO_ZAR || "price_1TCND5LjaM3mxti1e5oDqmHs",
-    usd: process.env.STRIPE_PRICE_PRO_USD || "price_1TCTVjLjaM3mxti1WVCb5hUV",
-    thb: process.env.STRIPE_PRICE_PRO_THB || "price_1TCTVkLjaM3mxti1rsaCbVvN",
+// Map plan IDs + currency to Stripe price IDs.
+//
+// Solopreneur price IDs MUST be set via environment variables — there are no
+// safe fallbacks.  Create the prices in the Stripe dashboard, then add the
+// resulting price_xxx IDs to your .env / Coolify environment:
+//
+//   STRIPE_PRICE_SOLOPRENEUR_ZAR=price_xxx   (ZAR recurring price)
+//   STRIPE_PRICE_SOLOPRENEUR_USD=price_xxx   (USD recurring price)
+//   STRIPE_PRICE_SOLOPRENEUR_THB=price_xxx   (THB recurring price)
+//
+// Missing vars are caught at checkout time (see getStripePriceId) so they
+// surface as a clear error rather than a silent Stripe API failure.
+
+// Business plan prices are already live — kept as safe defaults with env override.
+const STRIPE_PRICES: Record<string, Record<SupportedCurrency, string | undefined>> = {
+  solopreneur: {
+    // No placeholder fallbacks — missing env vars throw at checkout time.
+    zar: process.env.STRIPE_PRICE_SOLOPRENEUR_ZAR,
+    usd: process.env.STRIPE_PRICE_SOLOPRENEUR_USD,
+    thb: process.env.STRIPE_PRICE_SOLOPRENEUR_THB,
   },
   business: {
     zar: process.env.STRIPE_PRICE_BUSINESS_ZAR || "price_1TCND6LjaM3mxti1YbrHm1Nd",
@@ -34,8 +38,19 @@ const STRIPE_PRICES: Record<string, Record<SupportedCurrency, string>> = {
 export function getStripePriceId(
   planId: string,
   currency: SupportedCurrency = "zar"
-): string | undefined {
-  return STRIPE_PRICES[planId]?.[currency];
+): string {
+  const price = STRIPE_PRICES[planId]?.[currency];
+
+  if (!price) {
+    // Solopreneur prices have no placeholder fallback — require real env vars.
+    const envVarName = `STRIPE_PRICE_${planId.toUpperCase()}_${currency.toUpperCase()}`;
+    throw new Error(
+      `Missing required Stripe price ID for plan "${planId}" / currency "${currency}". ` +
+        `Set ${envVarName} in your environment (create the price in the Stripe dashboard first).`
+    );
+  }
+
+  return price;
 }
 
 export async function createCheckoutSession(opts: {

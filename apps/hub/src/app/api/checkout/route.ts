@@ -22,7 +22,7 @@ const checkoutSchema = z.object({
       "Enter a valid phone number with country code (e.g. +27821234567)"
     ),
   paymentProvider: z.enum(["yoco", "ozow", "payfast"]),
-  plan: z.enum(["intro", "growth", "pro", "business"]),
+  plan: z.enum(["solopreneur", "business"]),
   currency: z.enum(["zar", "usd", "thb"]).optional().default("zar"),
 });
 
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
 
       // Store Stripe checkout session ID
       await db.update(merchants)
-        .set({ yocoCheckoutId: session.id, updatedAt: new Date() })
+        .set({ stripeSessionId: session.id, updatedAt: new Date() })
         .where(eq(merchants.id, merchant.id));
 
       if (!session.url) {

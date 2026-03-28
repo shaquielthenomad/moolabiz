@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";
-import { stopApplication } from "@/lib/coolify";
 import { stopOpenClaw } from "@/lib/openclaw";
 import { getStripe } from "@/lib/stripe";
 
@@ -31,11 +30,7 @@ export async function POST() {
       );
     }
 
-    if (merchant.coolifyAppUuid) {
-      await stopApplication(merchant.coolifyAppUuid);
-    }
-
-    // Also stop OpenClaw container
+    // Stop OpenClaw container
     try { await stopOpenClaw(merchant.slug); } catch (e) {
       console.error("Failed to stop OpenClaw:", e);
     }

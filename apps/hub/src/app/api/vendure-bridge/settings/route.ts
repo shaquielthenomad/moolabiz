@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
  * POST /api/vendure-bridge/settings
  *
  * Update merchant settings. Currently supports:
- * - yocoSecretKey: Yoco payment secret key
+ * - paymentSecretKey: Payment provider secret key
  *
  * Auth: Bearer token (apiSecret) via authenticateBridgeRequest.
  */
@@ -26,11 +26,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { yocoSecretKey } = body as { yocoSecretKey?: string };
+  const { paymentSecretKey } = body as { paymentSecretKey?: string };
 
-  if (!yocoSecretKey || typeof yocoSecretKey !== "string") {
+  if (!paymentSecretKey || typeof paymentSecretKey !== "string") {
     return NextResponse.json(
-      { error: "yocoSecretKey (string) is required" },
+      { error: "paymentSecretKey (string) is required" },
       { status: 400 }
     );
   }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     await db
       .update(merchants)
       .set({
-        yocoSecretKey,
+        paymentSecretKey,
         updatedAt: new Date(),
       })
       .where(eq(merchants.id, auth.id));

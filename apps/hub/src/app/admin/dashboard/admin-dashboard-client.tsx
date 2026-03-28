@@ -11,7 +11,7 @@ interface Merchant {
   paymentProvider: string;
   plan: string;
   status: string;
-  coolifyAppUuid: string | null;
+  openclawContainerId: string | null;
   subdomain: string | null;
   createdAt: string;
   updatedAt: string;

@@ -117,6 +117,7 @@ export async function provisionMerchant(
         paymentProvider,
         apiSecret,
         vendureChannelToken: channelToken!,
+        plan,
       });
       openclawContainerId = ocResult.containerId;
       console.log(`[provision] OpenClaw deployed: ${openclawContainerId}`);

@@ -35,7 +35,7 @@ interface MerchantInfo {
 }
 
 /** Plans that unlock advanced product fields (variants, SKU, stock qty) */
-const ADVANCED_PLANS = ["growth", "pro", "business"];
+const ADVANCED_PLANS = ["business"];
 
 export function ProductsClient({
   merchant,

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { startApplication, stopApplication } from "@/lib/coolify";
 import { stopOpenClaw, startOpenClaw } from "@/lib/openclaw";
 import { checkAdminRequestOrSession } from "@/lib/admin-auth";
 import { getStripe } from "@/lib/stripe";
@@ -22,7 +21,7 @@ export async function GET(request: Request) {
       paymentProvider: merchants.paymentProvider,
       plan: merchants.plan,
       status: merchants.status,
-      coolifyAppUuid: merchants.coolifyAppUuid,
+      openclawContainerId: merchants.openclawContainerId,
       subdomain: merchants.subdomain,
       createdAt: merchants.createdAt,
       updatedAt: merchants.updatedAt,
@@ -34,10 +33,10 @@ export async function GET(request: Request) {
   }
 }
 
-const ACTION_MAP: Record<string, { fn: (uuid: string) => Promise<void>; status: string }> = {
-  suspend: { fn: stopApplication, status: "suspended" },
-  reactivate: { fn: startApplication, status: "active" },
-  cancel: { fn: stopApplication, status: "cancelled" },
+const ACTION_STATUS_MAP: Record<string, string> = {
+  suspend: "suspended",
+  reactivate: "active",
+  cancel: "cancelled",
 };
 
 // PATCH /api/admin/merchants — update merchant status
@@ -54,10 +53,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "merchantId and action required" }, { status: 400 });
     }
 
-    const entry = ACTION_MAP[action];
-    if (!entry) {
+    const newStatus = ACTION_STATUS_MAP[action];
+    if (!newStatus) {
       return NextResponse.json(
-        { error: `Invalid action. Use: ${Object.keys(ACTION_MAP).join(", ")}` },
+        { error: `Invalid action. Use: ${Object.keys(ACTION_STATUS_MAP).join(", ")}` },
         { status: 400 }
       );
     }
@@ -66,7 +65,6 @@ export async function PATCH(request: Request) {
       .select({
         id: merchants.id,
         slug: merchants.slug,
-        coolifyAppUuid: merchants.coolifyAppUuid,
         subscriptionId: merchants.subscriptionId,
       })
       .from(merchants)
@@ -75,11 +73,6 @@ export async function PATCH(request: Request) {
 
     if (!merchant) {
       return NextResponse.json({ error: "Merchant not found" }, { status: 404 });
-    }
-
-    // Handle Coolify app
-    if (merchant.coolifyAppUuid) {
-      await entry.fn(merchant.coolifyAppUuid);
     }
 
     // Handle OpenClaw container
@@ -111,10 +104,10 @@ export async function PATCH(request: Request) {
 
     await db
       .update(merchants)
-      .set({ status: entry.status, updatedAt: new Date() })
+      .set({ status: newStatus, updatedAt: new Date() })
       .where(eq(merchants.id, merchantId));
 
-    return NextResponse.json({ success: true, status: entry.status });
+    return NextResponse.json({ success: true, status: newStatus });
   } catch (err) {
     console.error("Admin merchants action error:", err);
     return NextResponse.json({ error: "Action failed" }, { status: 500 });
@@ -136,7 +129,6 @@ export async function POST(request: Request) {
         .select({
           id: merchants.id,
           slug: merchants.slug,
-          coolifyAppUuid: merchants.coolifyAppUuid,
         })
         .from(merchants)
         .where(eq(merchants.status, "active"));
@@ -144,7 +136,6 @@ export async function POST(request: Request) {
       let stopped = 0;
       for (const m of activeMerchants) {
         try {
-          if (m.coolifyAppUuid) await stopApplication(m.coolifyAppUuid);
           if (m.slug) await stopOpenClaw(m.slug);
           await db
             .update(merchants)

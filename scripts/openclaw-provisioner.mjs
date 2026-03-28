@@ -172,6 +172,15 @@ function json(res, status, data) {
 
 // ─── Route handlers ────────────────────────────────────────────────
 
+/** Return Docker memory and CPU limits based on the merchant's plan. */
+function resourcesForPlan(plan) {
+  if (plan === "business") {
+    return { memory: "2g", cpus: "1" };
+  }
+  // Default (solopreneur or unknown): 1 GB RAM, 0.5 CPU
+  return { memory: "1g", cpus: "0.5" };
+}
+
 async function handleDeploy(req, res) {
   const [body, err] = await parseBody(req, res);
   if (err) return;
@@ -180,6 +189,8 @@ async function handleDeploy(req, res) {
     // Optional fields the Hub can pass from signup data
     ownerName, businessType, timezone, paymentMethods, deliveryOptions,
     businessHours, faqs,
+    // Plan determines container resource limits
+    plan,
   } = body;
   let s;
   try {
@@ -365,13 +376,15 @@ On success: "Payment key saved! Customers can now pay online."
   //    The merchant visits {slug}.bot.moolabiz.shop to scan the QR code
   //    natively via the WebSocket protocol — no ASCII QR parsing needed.
   const traefikHost = `${s}.bot.moolabiz.shop`;
+  const { memory, cpus } = resourcesForPlan(plan);
+  console.log(`[provisioner] plan="${plan || "solopreneur"}" => memory=${memory}, cpus=${cpus}`);
   const args = [
     "run", "-d",
     "--name", `openclaw-${s}`,
     "--network", "coolify",
     "--restart", "unless-stopped",
-    "--memory", "2g",
-    "--cpus", "1",
+    "--memory", memory,
+    "--cpus", cpus,
     // Traefik labels — expose the gateway control UI at {slug}.bot.moolabiz.shop
     "--label", `traefik.enable=true`,
     "--label", `traefik.http.routers.openclaw-${s}.rule=Host(\`${traefikHost}\`)`,
@@ -391,8 +404,7 @@ On success: "Payment key saved! Customers can now pay online."
   if (ownerPhone) args.push("--env", `OWNER_PHONE=${ownerPhone}`);
   if (process.env.AZURE_OPENAI_API_KEY) args.push("--env", `AZURE_OPENAI_API_KEY=${process.env.AZURE_OPENAI_API_KEY}`);
   args.push("moolabiz/openclaw:latest");
-  // Bind to 0.0.0.0 so Traefik can route traffic to the gateway's control UI
-  args.push("--profile", s, "gateway", "--port", "18789", "--bind", "0.0.0.0", "--allow-unconfigured");
+  args.push("--profile", s, "gateway", "--port", "18789", "--bind", "loopback", "--allow-unconfigured");
 
   const containerId = execFileSync("docker", args, { encoding: "utf-8", timeout: 30000 }).trim();
   console.log(`[provisioner] deployed openclaw-${s} => ${containerId}`);

@@ -41,21 +41,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Merchant not found" }, { status: 404 });
     }
 
-    if (!merchant.yocoCheckoutId) {
+    if (!merchant.stripeSessionId) {
       return NextResponse.json({ error: "No payment found" }, { status: 403 });
     }
 
     // Verify the provided session ID matches the one stored during checkout.
     // This prevents account takeover — only someone who completed the actual
     // Stripe checkout (and was redirected with the real session ID) can proceed.
-    if (sessionId !== merchant.yocoCheckoutId) {
+    if (sessionId !== merchant.stripeSessionId) {
       return NextResponse.json({ error: "Invalid session ID" }, { status: 403 });
     }
 
     // Verify the checkout session is actually paid with Stripe
     try {
       const stripe = getStripe();
-      const checkoutSession = await stripe.checkout.sessions.retrieve(merchant.yocoCheckoutId);
+      const checkoutSession = await stripe.checkout.sessions.retrieve(merchant.stripeSessionId);
       if (checkoutSession.payment_status !== "paid") {
         return NextResponse.json({ error: "Payment not confirmed" }, { status: 402 });
       }
@@ -79,6 +79,14 @@ export async function POST(request: Request) {
         status: "provisioning",
       });
     }
+
+    // Write the Clerk userId to the merchant record so that dashboard queries
+    // (which filter by clerkId in 9+ places) can resolve this merchant.
+    // We do this unconditionally here — it is safe to re-apply the same value.
+    await db
+      .update(merchants)
+      .set({ clerkId: userId, updatedAt: new Date() })
+      .where(eq(merchants.id, merchant.id));
 
     // Atomic status transition
     const updated = await db

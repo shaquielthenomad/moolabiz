@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { checkAdminRequestOrSession } from "@/lib/admin-auth";
-import { stopApplication } from "@/lib/coolify";
 import { removeOpenClaw } from "@/lib/openclaw";
 
 export async function DELETE(request: Request) {
@@ -36,16 +35,6 @@ export async function DELETE(request: Request) {
     }
 
     const errors: string[] = [];
-
-    // Stop and remove Coolify app
-    if (merchant.coolifyAppUuid) {
-      try {
-        await stopApplication(merchant.coolifyAppUuid);
-      } catch (err) {
-        console.error("Failed to stop Coolify app:", err);
-        errors.push("Failed to stop Coolify app");
-      }
-    }
 
     // Remove OpenClaw container
     if (merchant.slug) {

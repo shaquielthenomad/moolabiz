@@ -54,8 +54,10 @@ export async function deployOpenClaw(opts: {
   paymentProvider: string;
   apiSecret?: string;
   vendureChannelToken?: string;
+  /** Merchant plan — determines container resource limits (solopreneur | business). */
+  plan?: string;
 }): Promise<{ containerId: string }> {
-  console.log(`[openclaw] Deploying for ${opts.slug}...`);
+  console.log(`[openclaw] Deploying for ${opts.slug} (plan: ${opts.plan || "solopreneur"})...`);
 
   const res = await provisionerRequest("/deploy", {
     slug: opts.slug,
@@ -63,6 +65,7 @@ export async function deployOpenClaw(opts: {
     ownerPhone: opts.ownerPhone,
     apiSecret: opts.apiSecret,
     vendureChannelToken: opts.vendureChannelToken,
+    plan: opts.plan,
   });
 
   const data = (await res.json()) as { containerId: string };

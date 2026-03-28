@@ -31,7 +31,7 @@ export default function SettingsClient({
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiSecret}`,
         },
-        body: JSON.stringify({ yocoSecretKey: yocoKey.trim() }),
+        body: JSON.stringify({ paymentSecretKey: yocoKey.trim() }),
       });
 
       if (!res.ok) {

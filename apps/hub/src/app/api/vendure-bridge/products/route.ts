@@ -10,6 +10,7 @@ import {
   CREATE_PRODUCT_VARIANTS_MUTATION,
   simplifyProduct,
 } from "@/lib/vendure";
+import { getPlan } from "@/lib/plans";
 
 /**
  * GET /api/vendure-bridge/products
@@ -86,6 +87,30 @@ export async function POST(request: NextRequest) {
       { error: "name (string) and price (number, in cents) are required" },
       { status: 400 }
     );
+  }
+
+  // Check plan product limit before creating
+  const plan = getPlan(auth.plan);
+  if (plan && plan.maxProducts !== null) {
+    try {
+      const countData = await vendureAdminQuery<{
+        products: { totalItems: number };
+      }>(auth.vendureChannelToken, LIST_PRODUCTS_QUERY, {
+        options: { take: 1, skip: 0 },
+      });
+      const currentCount = countData.products.totalItems;
+      if (currentCount >= plan.maxProducts) {
+        return NextResponse.json(
+          {
+            error: `Product limit reached. Your ${plan.name} plan allows up to ${plan.maxProducts} products. Upgrade to Business for unlimited products.`,
+          },
+          { status: 403 }
+        );
+      }
+    } catch (countErr) {
+      console.error("[vendure-bridge/products POST] Failed to count products for limit check:", countErr);
+      // Non-fatal: allow creation to proceed if count check fails
+    }
   }
 
   try {

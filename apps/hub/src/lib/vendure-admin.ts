@@ -8,7 +8,7 @@
 import crypto from "node:crypto";
 
 const VENDURE_ADMIN_API_URL =
-  process.env.VENDURE_ADMIN_API_URL || "http://localhost:3000/admin-api";
+  process.env.VENDURE_ADMIN_API_URL || "http://vendure-server:3000/admin-api";
 
 function getVendureCredentials(): { username: string; password: string } {
   const username = process.env.VENDURE_SUPERADMIN_USERNAME;

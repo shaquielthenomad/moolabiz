@@ -14,70 +14,43 @@ const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string; flag: string 
 const PAYMENT_ERROR_PATTERN = /payment system unavailable|yoco|checkout/i;
 
 const COMING_SOON_FEATURES = new Set([
-  "Appointment booking",
   "Daily revenue reports",
   "AI business advisor",
-  "Custom bot personality",
   "Advanced analytics",
-  "Multiple WhatsApp numbers",
-  "Custom integrations",
-  "SLA guarantee",
 ]);
 
 const PLANS = [
   {
-    id: "intro" as PlanType,
-    name: "Intro",
-    priceDisplays: { zar: "R49.99", usd: "$2.99", thb: "฿99" } as Record<SupportedCurrency, string>,
+    id: "solopreneur" as PlanType,
+    name: "Solopreneur",
+    priceDisplays: { zar: "R89", usd: "$4.99", thb: "฿179" } as Record<SupportedCurrency, string>,
     period: "/month",
     features: [
       "WhatsApp shop bot",
       "Web catalog storefront",
       "Order taking & cart",
+      "Up to 50 products",
       "1 payment provider",
-      "English + 1 language",
+      "English + 1 SA language",
+      "Dashboard & order management",
       "Email support",
-    ],
-  },
-  {
-    id: "growth" as PlanType,
-    name: "Growth",
-    priceDisplays: { zar: "R149", usd: "$8.99", thb: "฿299" } as Record<SupportedCurrency, string>,
-    period: "/month",
-    popular: true,
-    features: [
-      "Everything in Intro",
-      "All 5 SA languages",
-      "All payment providers",
-      "Appointment booking",
-      "Daily revenue reports",
-      "WhatsApp support",
-    ],
-  },
-  {
-    id: "pro" as PlanType,
-    name: "Pro",
-    priceDisplays: { zar: "R299", usd: "$16.99", thb: "฿579" } as Record<SupportedCurrency, string>,
-    period: "/month",
-    features: [
-      "Everything in Growth",
-      "AI business advisor",
-      "Priority support",
-      "Custom bot personality",
-      "Advanced analytics",
     ],
   },
   {
     id: "business" as PlanType,
     name: "Business",
-    priceDisplays: { zar: "R499", usd: "$27.99", thb: "฿949" } as Record<SupportedCurrency, string>,
+    priceDisplays: { zar: "R349", usd: "$19.99", thb: "฿679" } as Record<SupportedCurrency, string>,
     period: "/month",
+    popular: true,
     features: [
-      "Everything in Pro",
-      "Dedicated support",
-      "Multiple WhatsApp numbers",
-      "Custom integrations",
-      "SLA guarantee",
+      "Everything in Solopreneur",
+      "Unlimited products",
+      "All 5 SA languages",
+      "All payment providers",
+      "Daily revenue reports",
+      "AI business advisor",
+      "Priority WhatsApp support",
+      "Advanced analytics",
     ],
   },
 ];
@@ -149,7 +122,6 @@ export default function Home() {
     email: "",
     whatsappNumber: "+27",
     paymentProvider: "yoco",
-    pin: "",
   });
 
   async function handleSelectPlan(planId: PlanType) {
@@ -724,29 +696,6 @@ function SignupForm({
         </select>
       </div>
 
-      <div>
-        <label htmlFor="pin" className="block text-sm font-medium text-slate-700 mb-1.5">
-          Create a 4-digit PIN
-        </label>
-        <input
-          id="pin"
-          type="password"
-          required
-          maxLength={4}
-          pattern="[0-9]{4}"
-          inputMode="numeric"
-          title="Enter a 4-digit PIN"
-          placeholder="••••"
-          value={formData.pin}
-          onChange={(e) => {
-            const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-            setFormData({ ...formData, pin: val });
-          }}
-          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base tracking-[0.5em] text-center text-2xl transition-colors"
-        />
-        <p className="text-xs text-slate-400 mt-1.5">You&apos;ll use this to log in to your dashboard.</p>
-      </div>
-
       <button
         type="submit"
         className="w-full bg-[#059669] hover:bg-[#047857] text-white font-semibold text-base py-3.5 rounded-xl shadow-sm transition-colors"
@@ -796,7 +745,7 @@ function PlanPicker({
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
         {PLANS.map((plan) => (
           <div
             key={plan.id}

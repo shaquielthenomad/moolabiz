@@ -8,7 +8,7 @@
  */
 
 const VENDURE_ADMIN_API_URL =
-  process.env.VENDURE_ADMIN_API_URL || "http://localhost:3000/admin-api";
+  process.env.VENDURE_ADMIN_API_URL || "http://vendure-server:3000/admin-api";
 
 interface VendureResponse<T = unknown> {
   data?: T;
@@ -83,7 +83,7 @@ export async function uploadAssetToVendure(
   const authToken = await getAuthToken();
 
   const VENDURE_URL =
-    process.env.VENDURE_ADMIN_API_URL || "http://localhost:3000/admin-api";
+    process.env.VENDURE_ADMIN_API_URL || "http://vendure-server:3000/admin-api";
 
   // Vendure uses the GraphQL multipart request spec
   // https://github.com/jaydenseric/graphql-multipart-request-spec
