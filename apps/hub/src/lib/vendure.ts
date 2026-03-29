@@ -171,6 +171,14 @@ export const LIST_PRODUCTS_QUERY = `
   }
 `;
 
+export const COUNT_PRODUCTS_QUERY = `
+  query CountProducts($options: ProductListOptions) {
+    products(options: $options) {
+      totalItems
+    }
+  }
+`;
+
 export const GET_PRODUCT_QUERY = `
   ${ADMIN_PRODUCT_FIELDS}
   query GetProduct($id: ID!) {

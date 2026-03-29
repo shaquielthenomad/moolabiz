@@ -6,6 +6,7 @@ import {
 import {
   vendureAdminQuery,
   LIST_PRODUCTS_QUERY,
+  COUNT_PRODUCTS_QUERY,
   CREATE_PRODUCT_MUTATION,
   CREATE_PRODUCT_VARIANTS_MUTATION,
   simplifyProduct,
@@ -95,8 +96,8 @@ export async function POST(request: NextRequest) {
     try {
       const countData = await vendureAdminQuery<{
         products: { totalItems: number };
-      }>(auth.vendureChannelToken, LIST_PRODUCTS_QUERY, {
-        options: { take: 1, skip: 0 },
+      }>(auth.vendureChannelToken, COUNT_PRODUCTS_QUERY, {
+        options: { take: 0 },
       });
       const currentCount = countData.products.totalItems;
       if (currentCount >= plan.maxProducts) {

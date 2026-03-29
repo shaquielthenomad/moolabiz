@@ -333,7 +333,7 @@ Format orders with customer name, items, total.
 ### /set-payment-key [key]
 
 \`\`\`bash
-curl -s -X POST "\${CATALOG_URL}/settings" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"yocoSecretKey":"KEY_VALUE"}'
+curl -s -X POST "\${CATALOG_URL}/settings" -H "Content-Type: application/json" -H "Authorization: Bearer \${API_SECRET}" -d '{"paymentSecretKey":"KEY_VALUE"}'
 \`\`\`
 
 On success: "Payment key saved! Customers can now pay online."
