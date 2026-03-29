@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { sendWhatsAppNotification } from "@/lib/openclaw";
+import { sendOrderNotificationEmail } from "@/lib/email";
 
 /**
  * POST /api/storefront/order-notification
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
       slug: merchants.slug,
       businessName: merchants.businessName,
       whatsappNumber: merchants.whatsappNumber,
+      email: merchants.email,
       status: merchants.status,
     })
     .from(merchants)
@@ -133,6 +135,23 @@ export async function POST(request: NextRequest) {
     console.error(
       `[storefront/order-notification] Failed to notify ${merchant.businessName} for order ${orderCode}:`,
       result.error
+    );
+  }
+
+  // Send email as a backup — fire-and-forget so it never blocks the response
+  if (merchant.email) {
+    sendOrderNotificationEmail({
+      to: merchant.email,
+      orderCode,
+      customerName,
+      total,
+      itemCount,
+      shippingAddress,
+    }).catch((err) =>
+      console.error(
+        `[storefront/order-notification] Email backup failed for order ${orderCode}:`,
+        err
+      )
     );
   }
 

@@ -7,6 +7,7 @@ import {
 } from '@vendure/core';
 import { StripePlugin } from '@vendure/payments-plugin/package/stripe';
 import { defaultEmailHandlers, EmailPlugin, FileBasedTemplateLoader } from '@vendure/email-plugin';
+import { shippingConfirmationHandler, deliveryConfirmationHandler } from './email-handlers';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import { DashboardPlugin } from '@vendure/dashboard/plugin';
 import { GraphiqlPlugin } from '@vendure/graphiql-plugin';
@@ -85,7 +86,7 @@ export const config: VendureConfig = {
             devMode: IS_DEV,
             outputPath: path.join(__dirname, '../static/email/test-emails'),
             route: 'mailbox',
-            handlers: defaultEmailHandlers,
+            handlers: [...defaultEmailHandlers, shippingConfirmationHandler, deliveryConfirmationHandler],
             templateLoader: new FileBasedTemplateLoader(path.join(__dirname, '../static/email/templates')),
             // In production, send emails via Resend SMTP relay (or custom SMTP).
             // In dev, emails are written to disk (devMode: true above).

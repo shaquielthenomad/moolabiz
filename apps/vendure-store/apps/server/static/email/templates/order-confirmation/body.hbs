@@ -1,132 +1,163 @@
-{{> header title="Order Receipt" }}
+{{> header title="Order Confirmation" }}
 
 <mj-raw>
     <style type="text/css">
-    .callout {
-        background-color: #375a67;
-        padding: 15px 0;
+    .callout-section {
+        background-color: #059669;
     }
-    .callout-large > div {
+    .callout-label > div {
         text-align: center !important;
-        color: #fff !important;
-        font-size: 16px !important;
-        font-weight: bold;
+        color: #d1fae5 !important;
+        font-size: 11px !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
         padding: 0;
     }
-    .callout-small > div {
+    .callout-value > div {
         text-align: center !important;
-        color: #fff !important;
-        font-size: 14px !important;
+        color: #ffffff !important;
+        font-size: 15px !important;
+        font-weight: bold;
         padding: 0;
     }
     ul.address {
         list-style-type: none;
         padding: 0;
+        margin: 0;
+    }
+    ul.address li {
+        padding: 2px 0;
+        color: #374151;
+        font-size: 14px;
     }
     tr.order-row td {
-        border-bottom: 1px dashed #eee;
+        border-bottom: 1px solid #f3f4f6;
+        padding: 10px 6px;
+        vertical-align: middle;
+        font-size: 14px;
+        color: #374151;
     }
-    tr.order-row td:last-child {
-        text-align: center;
-    }
-    tr.total-row {
+    tr.total-row td {
         font-weight: bold;
+        font-size: 15px;
+        color: #111827;
+        border-top: 2px solid #e5e7eb;
+        border-bottom: none;
     }
-    .bg-off-white {
-        background-color: #f5f5f5;
+    .cod-notice > div {
+        background-color: #ecfdf5 !important;
+        border-left: 4px solid #059669 !important;
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+        color: #065f46 !important;
+        border-radius: 4px;
     }
     </style>
 </mj-raw>
 
-<mj-section css-class="bg-off-white">
+<!-- Greeting -->
+<mj-section background-color="#ffffff" padding="8px 24px 0 24px">
     <mj-column>
-        <mj-text>
-            Dear {{ order.customer.firstName }} {{ order.customer.lastName }},
+        <mj-text font-size="16px" color="#111827">
+            Hi <strong>{{#if order.customer.firstName}}{{ order.customer.firstName }}{{else}}there{{/if}}</strong>,
         </mj-text>
-        <mj-text>
-            Thank you for your order!
+        <mj-text font-size="15px" color="#374151" padding-top="4px">
+            Thanks for your order! We have received it and it is being processed.
+            You will get another email once your order ships.
         </mj-text>
     </mj-column>
 </mj-section>
 
-
-<mj-section css-class="callout">
+<!-- Order summary callout bar -->
+<mj-section css-class="callout-section" padding="14px 24px">
     <mj-column>
-        <mj-text css-class="callout-large"><strong>Order Code</strong></mj-text>
-        <mj-text css-class="callout-small">{{ order.code }}</mj-text>
+        <mj-text css-class="callout-label">Order Number</mj-text>
+        <mj-text css-class="callout-value">{{ order.code }}</mj-text>
     </mj-column>
     <mj-column>
-        <mj-text css-class="callout-large"><strong>Order Date</strong></mj-text>
-        <mj-text css-class="callout-small">{{ formatDate order.orderPlacedAt }}</mj-text>
+        <mj-text css-class="callout-label">Order Date</mj-text>
+        <mj-text css-class="callout-value">{{ formatDate order.orderPlacedAt }}</mj-text>
     </mj-column>
     <mj-column>
-        <mj-text css-class="callout-large"><strong>Total Price</strong></mj-text>
-        <mj-text css-class="callout-small">{{ formatMoney order.total order.currencyCode 'en' }}</mj-text>
+        <mj-text css-class="callout-label">Total</mj-text>
+        <mj-text css-class="callout-value">{{ formatMoney order.totalWithTax order.currencyCode 'en' }}</mj-text>
     </mj-column>
 </mj-section>
 
-
-<mj-section css-class="bg-off-white">
+<!-- Shipping address -->
+<mj-section background-color="#ffffff" padding="16px 24px 8px 24px">
     <mj-column>
-        <mj-text>
+        <mj-text font-size="14px" font-weight="bold" color="#111827" padding-bottom="4px">
+            Shipping To
+        </mj-text>
+        <mj-text font-size="14px" color="#374151">
             {{#with order.shippingAddress }}
-                <h3>Shipping To: {{ fullName }}</h3>
                 <ul class="address">
+                    {{#if fullName}}<li><strong>{{ fullName }}</strong></li>{{/if}}
                     {{#if company}}<li>{{ company }}</li>{{/if}}
                     {{#if streetLine1}}<li>{{ streetLine1 }}</li>{{/if}}
                     {{#if streetLine2}}<li>{{ streetLine2 }}</li>{{/if}}
-                    {{#if city}}<li>{{ city }}</li>{{/if}}
-                    {{#if province}}<li>{{ province }}</li>{{/if}}
+                    {{#if city}}<li>{{ city }}{{#if province}}, {{ province }}{{/if}}</li>{{/if}}
                     {{#if postalCode}}<li>{{ postalCode }}</li>{{/if}}
                     {{#if country}}<li>{{ country }}</li>{{/if}}
-                    {{#if phoneNumber}}<li>{{ phoneNumber }}</li>{{/if}}
+                    {{#if phoneNumber}}<li>&#128222; {{ phoneNumber }}</li>{{/if}}
                 </ul>
             {{/with}}
         </mj-text>
     </mj-column>
 </mj-section>
 
-<mj-section>
+<!-- Order items table -->
+<mj-section background-color="#ffffff" padding="8px 24px 16px 24px">
     <mj-column>
-        <mj-text>
-            <h3>Order Summary:</h3>
+        <mj-text font-size="14px" font-weight="bold" color="#111827" padding-bottom="4px">
+            Order Items
         </mj-text>
         <mj-table cellpadding="6px">
             {{#each order.lines }}
                 <tr class="order-row">
-                    <td>
+                    <td style="width:56px;">
                         <img alt="{{ productVariant.name }}"
-                             style="width: 50px; height: 50px;"
+                             style="width:50px;height:50px;object-fit:cover;border-radius:4px;display:block;"
                              src="{{ featuredAsset.preview }}?w=50&h=50" />
                     </td>
-                    <td>{{ quantity }} x {{ productVariant.name }}</td>
-                    <td>{{ productVariant.quantity }}</td>
-                    <td>{{ formatMoney discountedLinePriceWithTax ../order.currencyCode 'en' }}</td>
+                    <td>{{ productVariant.name }}</td>
+                    <td style="white-space:nowrap;color:#6b7280;">x{{ quantity }}</td>
+                    <td style="white-space:nowrap;text-align:right;">{{ formatMoney discountedLinePriceWithTax ../order.currencyCode 'en' }}</td>
                 </tr>
             {{/each}}
             {{#each order.discounts }}
                 <tr class="order-row">
-                    <td colspan="3">
-                        {{ description }}
-                    </td>
-                    <td>{{ formatMoney amount ../order.currencyCode 'en' }}</td>
+                    <td colspan="3" style="color:#059669;">{{ description }}</td>
+                    <td style="white-space:nowrap;text-align:right;color:#059669;">-{{ formatMoney amount ../order.currencyCode 'en' }}</td>
                 </tr>
             {{/each}}
             <tr class="order-row">
-                <td colspan="3">Sub-total:</td>
-                <td>{{ formatMoney order.subTotalWithTax order.currencyCode 'en' }}</td>
+                <td colspan="3" style="color:#6b7280;">Subtotal</td>
+                <td style="white-space:nowrap;text-align:right;">{{ formatMoney order.subTotalWithTax order.currencyCode 'en' }}</td>
             </tr>
-            {{#each shippingLines }}
+            {{#each order.shippingLines }}
             <tr class="order-row">
-                <td colspan="3">Shipping ({{ shippingMethod.name }}):</td>
-                <td>{{ formatMoney priceWithTax ../order.currencyCode 'en' }}</td>
+                <td colspan="3" style="color:#6b7280;">Shipping ({{ shippingMethod.name }})</td>
+                <td style="white-space:nowrap;text-align:right;">{{ formatMoney priceWithTax ../order.currencyCode 'en' }}</td>
             </tr>
             {{/each}}
             <tr class="order-row total-row">
-                <td colspan="3">Total:</td>
-                <td>{{ formatMoney order.totalWithTax order.currencyCode 'en' }}</td>
+                <td colspan="3">Total</td>
+                <td style="white-space:nowrap;text-align:right;">{{ formatMoney order.totalWithTax order.currencyCode 'en' }}</td>
             </tr>
         </mj-table>
+    </mj-column>
+</mj-section>
+
+<!-- COD notice -->
+<mj-section background-color="#ffffff" padding="0 24px 16px 24px">
+    <mj-column>
+        <mj-text css-class="cod-notice" font-size="14px">
+            <strong>Payment:</strong> This order uses Cash on Delivery (COD).
+            Please have the exact amount ready when your order arrives.
+            If you have any questions about payment, reply to this email.
+        </mj-text>
     </mj-column>
 </mj-section>
 

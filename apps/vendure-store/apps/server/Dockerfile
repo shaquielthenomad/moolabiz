@@ -25,6 +25,8 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=deps  --chown=vendure:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=vendure:nodejs /app/dist ./dist
 COPY --from=builder --chown=vendure:nodejs /app/package.json ./
+# Include email templates and other static assets (email templates are read at runtime)
+COPY --from=builder --chown=vendure:nodejs /app/static ./static
 
 USER vendure
 EXPOSE 3000

@@ -1,20 +1,37 @@
-{{> header title="Verify Your New Email Address" }}
+{{> header title="Verify your new email address" }}
 
-<mj-section background-color="#fafafa">
+<mj-section background-color="#ffffff" padding="16px 24px 8px 24px">
     <mj-column>
-        <mj-text color="#525252">
-            We received a request to change your registered email address to this one.
-            Click the button below to verify this address and complete the process:
+        <mj-text font-size="15px" color="#374151">
+            We received a request to update the email address on your MoolaBiz account to this one.
+            Click the button below to verify this address and complete the change.
         </mj-text>
-
-        <mj-button font-family="Helvetica"
-                   background-color="#f45e43"
-                   color="white"
-                   href="{{ changeEmailAddressUrl }}?token={{ identifierChangeToken }}">
-            Verify Me!
-        </mj-button>
+        <mj-text font-size="14px" color="#6b7280" padding-top="4px">
+            If you did not request this change, please ignore this email &mdash;
+            your current email address will remain unchanged.
+        </mj-text>
     </mj-column>
 </mj-section>
 
+<mj-section background-color="#ffffff" padding="8px 24px 24px 24px">
+    <mj-column>
+        <mj-button font-family="Arial, sans-serif"
+                   background-color="#059669"
+                   color="#ffffff"
+                   font-size="15px"
+                   font-weight="bold"
+                   border-radius="6px"
+                   padding="14px 28px"
+                   href="{{ changeEmailAddressUrl }}?token={{ identifierChangeToken }}">
+            Verify new email
+        </mj-button>
+        <mj-text font-size="12px" color="#9ca3af" padding-top="12px">
+            Button not working? Copy and paste this link into your browser:<br />
+            <a href="{{ changeEmailAddressUrl }}?token={{ identifierChangeToken }}" style="color:#059669;word-break:break-all;">
+                {{ changeEmailAddressUrl }}?token={{ identifierChangeToken }}
+            </a>
+        </mj-text>
+    </mj-column>
+</mj-section>
 
 {{> footer }}

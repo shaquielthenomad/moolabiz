@@ -1,0 +1,164 @@
+{{> header title="Your Order Has Been Delivered!" }}
+
+<mj-raw>
+    <style type="text/css">
+    .hero-bg {
+        background-color: #059669;
+    }
+    .hero-text > div {
+        color: #ffffff !important;
+        text-align: center !important;
+        font-size: 22px !important;
+        font-weight: bold;
+    }
+    .hero-sub > div {
+        color: #d1fae5 !important;
+        text-align: center !important;
+        font-size: 15px !important;
+    }
+    .meta-label > div {
+        color: #6b7280 !important;
+        font-size: 12px !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .meta-value > div {
+        color: #111827 !important;
+        font-size: 15px !important;
+        font-weight: bold;
+    }
+    .bg-off-white {
+        background-color: #f9fafb;
+    }
+    .review-box {
+        background-color: #f0fdf4;
+        border-radius: 6px;
+        padding: 16px;
+        text-align: center;
+    }
+    ul.address {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        color: #374151;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    tr.order-row td {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 8px 4px;
+        font-size: 14px;
+        color: #374151;
+    }
+    tr.total-row td {
+        font-weight: bold;
+        font-size: 15px;
+        color: #111827;
+        padding-top: 12px;
+    }
+    </style>
+</mj-raw>
+
+<!-- Hero banner -->
+<mj-section css-class="hero-bg" padding="32px 0">
+    <mj-column>
+        <mj-text css-class="hero-text">Your order has been delivered!</mj-text>
+        <mj-text css-class="hero-sub">Order #{{ order.code }}</mj-text>
+    </mj-column>
+</mj-section>
+
+<!-- Greeting -->
+<mj-section css-class="bg-off-white" padding="24px 24px 0">
+    <mj-column>
+        <mj-text color="#374151" font-size="15px">
+            Hi {{ order.customer.firstName }},
+        </mj-text>
+        <mj-text color="#374151" font-size="15px">
+            Your order has been successfully delivered. We hope you enjoy your purchase!
+        </mj-text>
+    </mj-column>
+</mj-section>
+
+<!-- Order meta -->
+<mj-section padding="16px 24px">
+    <mj-column>
+        <mj-text css-class="meta-label">Order Number</mj-text>
+        <mj-text css-class="meta-value">{{ order.code }}</mj-text>
+    </mj-column>
+    <mj-column>
+        <mj-text css-class="meta-label">Order Total</mj-text>
+        <mj-text css-class="meta-value">{{ formatMoney order.totalWithTax order.currencyCode 'en' }}</mj-text>
+    </mj-column>
+</mj-section>
+
+<!-- Delivered to address -->
+<mj-section css-class="bg-off-white" padding="16px 24px">
+    <mj-column>
+        <mj-text color="#111827" font-size="15px" font-weight="bold">
+            Delivered to:
+        </mj-text>
+        <mj-text>
+            {{#with shippingAddress}}
+            <ul class="address">
+                {{#if fullName}}<li><strong>{{ fullName }}</strong></li>{{/if}}
+                {{#if company}}<li>{{ company }}</li>{{/if}}
+                {{#if streetLine1}}<li>{{ streetLine1 }}</li>{{/if}}
+                {{#if streetLine2}}<li>{{ streetLine2 }}</li>{{/if}}
+                {{#if city}}<li>{{ city }}{{#if province}}, {{ province }}{{/if}}</li>{{/if}}
+                {{#if postalCode}}<li>{{ postalCode }}</li>{{/if}}
+                {{#if country}}<li>{{ country }}</li>{{/if}}
+                {{#if phoneNumber}}<li>{{ phoneNumber }}</li>{{/if}}
+            </ul>
+            {{/with}}
+        </mj-text>
+    </mj-column>
+</mj-section>
+
+<!-- Order summary -->
+<mj-section padding="16px 24px 8px">
+    <mj-column>
+        <mj-text color="#111827" font-size="15px" font-weight="bold">
+            Order summary:
+        </mj-text>
+        <mj-table cellpadding="6px">
+            {{#each order.lines}}
+            <tr class="order-row">
+                <td>
+                    <img alt="{{ productVariant.name }}"
+                         style="width: 48px; height: 48px; border-radius: 4px;"
+                         src="{{ featuredAsset.preview }}?w=48&h=48" />
+                </td>
+                <td>{{ quantity }} &times; {{ productVariant.name }}</td>
+                <td style="text-align:right;">{{ formatMoney discountedLinePriceWithTax ../order.currencyCode 'en' }}</td>
+            </tr>
+            {{/each}}
+            {{#each order.discounts}}
+            <tr class="order-row">
+                <td colspan="2" style="color:#059669;">{{ description }}</td>
+                <td style="text-align:right; color:#059669;">{{ formatMoney amount ../order.currencyCode 'en' }}</td>
+            </tr>
+            {{/each}}
+            {{#each shippingLines}}
+            <tr class="order-row">
+                <td colspan="2" style="color:#6b7280;">Shipping ({{ shippingMethod.name }})</td>
+                <td style="text-align:right; color:#6b7280;">{{ formatMoney priceWithTax ../order.currencyCode 'en' }}</td>
+            </tr>
+            {{/each}}
+            <tr class="total-row">
+                <td colspan="2">Total</td>
+                <td style="text-align:right;">{{ formatMoney order.totalWithTax order.currencyCode 'en' }}</td>
+            </tr>
+        </mj-table>
+    </mj-column>
+</mj-section>
+
+<!-- Help note -->
+<mj-section padding="8px 24px 24px">
+    <mj-column>
+        <mj-text color="#6b7280" font-size="13px">
+            Not what you expected? Reply to this email and we will sort it out for you.
+        </mj-text>
+    </mj-column>
+</mj-section>
+
+{{> footer }}
