@@ -70,7 +70,7 @@
 <mj-section css-class="bg-off-white" padding="24px 24px 0">
     <mj-column>
         <mj-text color="#374151" font-size="15px">
-            Hi {{ order.customer.firstName }},
+            Hi {{#if order.customer.firstName}}{{ order.customer.firstName }}{{else}}there{{/if}},
         </mj-text>
         <mj-text color="#374151" font-size="15px">
             Great news! Your order has been dispatched and is on its way to you. You can expect it to arrive within the timeframe agreed at checkout.

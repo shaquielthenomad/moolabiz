@@ -11,10 +11,18 @@ export const shippingConfirmationHandler = new EmailEventListener('shipping-conf
     .setRecipient(event => event.order.customer?.emailAddress ?? '')
     .setFrom('{{ fromAddress }}')
     .setSubject('Your order #{{ order.code }} has been shipped!')
+    .loadData(async ({ event, injector }) => {
+        const { OrderService } = await import('@vendure/core');
+        const orderService = injector.get(OrderService);
+        const order = await orderService.findOne(event.ctx, event.order.id, [
+            'lines', 'lines.productVariant', 'shippingLines', 'shippingLines.shippingMethod', 'customer',
+        ]);
+        return { order: order ?? event.order };
+    })
     .setTemplateVars(event => ({
-        order: event.order,
-        shippingAddress: event.order.shippingAddress,
-        shippingLines: event.order.shippingLines,
+        order: event.data.order,
+        shippingAddress: event.data.order.shippingAddress,
+        shippingLines: event.data.order.shippingLines,
     }));
 
 /**
@@ -27,8 +35,16 @@ export const deliveryConfirmationHandler = new EmailEventListener('delivery-conf
     .setRecipient(event => event.order.customer?.emailAddress ?? '')
     .setFrom('{{ fromAddress }}')
     .setSubject('Your order #{{ order.code }} has been delivered!')
+    .loadData(async ({ event, injector }) => {
+        const { OrderService } = await import('@vendure/core');
+        const orderService = injector.get(OrderService);
+        const order = await orderService.findOne(event.ctx, event.order.id, [
+            'lines', 'lines.productVariant', 'shippingLines', 'shippingLines.shippingMethod', 'customer',
+        ]);
+        return { order: order ?? event.order };
+    })
     .setTemplateVars(event => ({
-        order: event.order,
-        shippingAddress: event.order.shippingAddress,
-        shippingLines: event.order.shippingLines,
+        order: event.data.order,
+        shippingAddress: event.data.order.shippingAddress,
+        shippingLines: event.data.order.shippingLines,
     }));

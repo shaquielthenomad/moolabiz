@@ -32,7 +32,7 @@ export async function sendWelcomeEmail(opts: {
   try {
     const resend = getResend();
     await resend.emails.send({
-      from: "MoolaBiz <no-reply@mail.moolabiz.shop>",
+      from: "MoolaBiz <noreply@moolabiz.shop>",
       to: opts.to,
       subject: `Welcome to MoolaBiz — ${opts.businessName} is live!`,
       html: `
@@ -117,7 +117,7 @@ export async function sendOrderNotificationEmail(opts: {
   try {
     const resend = getResend();
     await resend.emails.send({
-      from: "MoolaBiz <no-reply@mail.moolabiz.shop>",
+      from: "MoolaBiz <noreply@moolabiz.shop>",
       to: opts.to,
       subject: `New Order #${safeOrderCode} — ${safeCustomerName}`,
       html: `

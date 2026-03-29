@@ -71,7 +71,7 @@
 <mj-section css-class="bg-off-white" padding="24px 24px 0">
     <mj-column>
         <mj-text color="#374151" font-size="15px">
-            Hi {{ order.customer.firstName }},
+            Hi {{#if order.customer.firstName}}{{ order.customer.firstName }}{{else}}there{{/if}},
         </mj-text>
         <mj-text color="#374151" font-size="15px">
             Your order has been successfully delivered. We hope you enjoy your purchase!
