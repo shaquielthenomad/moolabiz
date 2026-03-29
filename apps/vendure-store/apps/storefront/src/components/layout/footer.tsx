@@ -88,12 +88,12 @@ export async function Footer() {
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>
                                 <a
-                                    href="https://wa.me/27614687087"
+                                    href="https://moolabiz.shop/support"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="hover:text-foreground transition-colors"
                                 >
-                                    WhatsApp Support
+                                    Support Centre
                                 </a>
                             </li>
                             <li>

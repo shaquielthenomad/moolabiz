@@ -191,7 +191,7 @@ export function ProductInfo({product, searchParams}: ProductInfoProps) {
             {selectedVariant && (
                 <div className="text-sm">
                     {isInStock ? (
-                        <span className="text-green-600 font-medium">In Stock</span>
+                        <span className="text-emerald-600 font-medium">In Stock</span>
                     ) : (
                         <span className="text-destructive font-medium">Out of Stock</span>
                     )}

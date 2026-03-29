@@ -29,7 +29,7 @@ export async function OrderSummary({activeOrder}: { activeOrder: ActiveOrder }) 
                 {activeOrder.discounts && activeOrder.discounts.length > 0 && (
                     <>
                         {activeOrder.discounts.map((discount, index) => (
-                            <div key={index} className="flex justify-between text-sm text-green-600">
+                            <div key={index} className="flex justify-between text-sm text-emerald-600">
                                 <span>{discount.description}</span>
                                 <span>
                                     <Price value={discount.amountWithTax} currencyCode={activeOrder.currencyCode}/>

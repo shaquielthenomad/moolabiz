@@ -8,6 +8,7 @@ import {SearchInput} from '@/components/layout/search-input';
 import {NavbarUserSkeleton} from '@/components/shared/skeletons/navbar-user-skeleton';
 import {SearchInputSkeleton} from '@/components/shared/skeletons/search-input-skeleton';
 import {getStoreName} from '@/lib/vendure/api';
+import {Search} from 'lucide-react';
 
 export async function Navbar() {
     const storeName = (await getStoreName()) || 'Store';
@@ -32,6 +33,13 @@ export async function Navbar() {
                                 <SearchInput/>
                             </Suspense>
                         </div>
+                        <Link
+                            href="/search"
+                            className="lg:hidden p-2 rounded-md hover:bg-accent transition-colors"
+                            aria-label="Search"
+                        >
+                            <Search className="h-5 w-5" />
+                        </Link>
                         <ThemeSwitcher />
                         <Suspense>
                             <NavbarCart/>

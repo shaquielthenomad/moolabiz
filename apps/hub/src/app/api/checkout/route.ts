@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { z } from "zod";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { getPlan } from "@/lib/plans";
 import { createCheckoutSession, getStripePriceId } from "@/lib/stripe";
 import type { CheckoutResponse, SupportedCurrency } from "@/lib/types";
-import { sendWelcomeEmail } from "@/lib/email";
 
 const checkoutSchema = z.object({
   businessName: z
@@ -42,6 +42,10 @@ function slugify(name: string): string {
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    const { allowed, remaining } = await rateLimit(`rl:checkout:${ip}`, 5, 3600);
+    if (!allowed) return rateLimitResponse(remaining, 3600);
+
     const body = await request.json();
     const parsed = checkoutSchema.safeParse(body);
 

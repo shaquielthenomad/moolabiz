@@ -27,6 +27,7 @@
 
 import http from "node:http";
 import { execFileSync, execFile } from "node:child_process";
+import { timingSafeEqual } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -406,7 +407,12 @@ On success: "Payment key saved! Customers can now pay online."
   args.push("moolabiz/openclaw:latest");
   args.push("--profile", s, "gateway", "--port", "18789", "--bind", "loopback", "--allow-unconfigured");
 
-  const containerId = execFileSync("docker", args, { encoding: "utf-8", timeout: 30000 }).trim();
+  const { stdout: containerIdRaw, stderr: dockerRunStderr, err: dockerRunErr } = await execFileAsync("docker", args, 30000);
+  if (dockerRunErr) {
+    console.error(`[provisioner] docker run failed for ${s}:`, dockerRunStderr);
+    return json(res, 500, { error: "Failed to deploy container", detail: dockerRunStderr });
+  }
+  const containerId = containerIdRaw.trim();
   console.log(`[provisioner] deployed openclaw-${s} => ${containerId}`);
 
   // Copy custom workspace files to OpenClaw's actual workspace path
@@ -669,9 +675,14 @@ const routes = {
   "/notify": handleNotify,
 };
 
+function safeCompare(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
 const server = http.createServer(async (req, res) => {
   // Auth check
-  if (req.headers["x-auth-key"] !== AUTH_KEY) {
+  if (!safeCompare(req.headers["x-auth-key"], AUTH_KEY)) {
     res.writeHead(401);
     res.end("Unauthorized");
     return;

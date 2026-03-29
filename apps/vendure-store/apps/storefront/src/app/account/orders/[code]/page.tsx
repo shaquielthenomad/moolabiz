@@ -140,7 +140,7 @@ export default async function OrderDetailPage(props: PageProps<'/account/orders/
                                                 <span className="text-muted-foreground">
                                                     {discount.description}
                                                 </span>
-                                                <span className="text-green-600">
+                                                <span className="text-emerald-600">
                                                     -<Price value={discount.amountWithTax}
                                                             currencyCode={order.currencyCode}/>
                                                 </span>

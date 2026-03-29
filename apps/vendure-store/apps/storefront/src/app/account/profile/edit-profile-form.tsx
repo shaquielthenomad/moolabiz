@@ -64,7 +64,7 @@ export function EditProfileForm({ customer }: EditProfileFormProps) {
                         </div>
                     )}
                     {state?.success && (
-                        <div className="text-sm text-green-600">
+                        <div className="text-sm text-emerald-600">
                             Profile updated successfully!
                         </div>
                     )}

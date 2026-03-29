@@ -72,7 +72,7 @@ export function EditEmailForm({ currentEmail }: EditEmailFormProps) {
                         </div>
                     )}
                     {state?.success && (
-                        <div className="text-sm text-green-600">
+                        <div className="text-sm text-emerald-600">
                             Verification email sent! Please check your inbox and click the link to confirm your new email address.
                         </div>
                     )}

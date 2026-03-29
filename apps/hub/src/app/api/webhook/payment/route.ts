@@ -124,24 +124,35 @@ async function handleCheckoutCompleted(session: Record<string, unknown>, eventId
     .set({ merchantId })
     .where(eq(webhookEvents.eventId, eventId));
 
-  console.log(`[stripe] Provisioning bot for ${merchant.businessName} (${merchant.slug})`);
+  // Re-query to get the latest state — the pre-check above used stale data.
+  // Another process (e.g. provision-after-payment) may have already set
+  // vendureChannelId/vendureChannelToken before we won the atomic UPDATE race.
+  const [freshMerchant] = await db.select().from(merchants)
+    .where(eq(merchants.id, merchantId)).limit(1);
+
+  if (!freshMerchant) {
+    console.error("[stripe] Merchant disappeared after atomic update:", merchantId);
+    return;
+  }
+
+  console.log(`[stripe] Provisioning bot for ${freshMerchant.businessName} (${freshMerchant.slug})`);
 
   const result = await provisionMerchant({
     merchantId,
-    slug: merchant.slug,
-    businessName: merchant.businessName,
-    whatsappNumber: merchant.whatsappNumber,
-    paymentProvider: merchant.paymentProvider,
-    plan: merchant.plan,
-    email: merchant.email,
-    existingVendureChannelId: merchant.vendureChannelId,
-    existingVendureChannelToken: merchant.vendureChannelToken,
+    slug: freshMerchant.slug,
+    businessName: freshMerchant.businessName,
+    whatsappNumber: freshMerchant.whatsappNumber,
+    paymentProvider: freshMerchant.paymentProvider,
+    plan: freshMerchant.plan,
+    email: freshMerchant.email,
+    existingVendureChannelId: freshMerchant.vendureChannelId,
+    existingVendureChannelToken: freshMerchant.vendureChannelToken,
   });
 
   if (result.success) {
-    console.log(`[stripe] Provisioning complete for ${merchant.businessName}`);
+    console.log(`[stripe] Provisioning complete for ${freshMerchant.businessName}`);
   } else {
-    console.error(`[stripe] Provisioning failed for ${merchant.businessName}: ${result.error}`);
+    console.error(`[stripe] Provisioning failed for ${freshMerchant.businessName}: ${result.error}`);
   }
 }
 

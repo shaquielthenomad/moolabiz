@@ -36,6 +36,20 @@
       "when": 1743292800000,
       "tag": "0004_rename_payment_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1743379200000,
+      "tag": "0005_add_waitlist_drop_dead_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1743465600000,
+      "tag": "0006_add_unique_subscription_id",
+      "breakpoints": true
     }
   ]
 }

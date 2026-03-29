@@ -459,15 +459,16 @@ export async function getChannelByCode(
       items: Array<{ id: string; code: string; token: string }>;
     };
   }>(
-    `query GetChannels {
-      channels {
+    `query GetChannels($options: ChannelListOptions) {
+      channels(options: $options) {
         items {
           id
           code
           token
         }
       }
-    }`
+    }`,
+    { options: { take: 100 } }
   );
 
   const channel = data.channels.items.find((ch) => ch.code === slug);

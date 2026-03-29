@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import {
   authenticateBridgeRequest,
   isErrorResponse,
@@ -26,6 +27,10 @@ import { eq } from "drizzle-orm";
  * }
  */
 export async function POST(request: NextRequest) {
+  const token = request.headers.get("authorization")?.slice(7)?.trim() || "unknown";
+  const { allowed, remaining } = await rateLimit(`rl:vb-notify:${token}`, 30, 60);
+  if (!allowed) return rateLimitResponse(remaining, 60);
+
   const auth = await authenticateBridgeRequest(request);
   if (isErrorResponse(auth)) return auth;
 

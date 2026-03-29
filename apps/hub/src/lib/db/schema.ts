@@ -15,7 +15,7 @@ export const merchants = pgTable("merchants", {
   subdomain: text("subdomain"),
   stripeSessionId: text("stripe_session_id"),
   paymentSecretKey: text("payment_secret_key"),
-  subscriptionId: text("subscription_id"),
+  subscriptionId: text("subscription_id").unique(),
   whatsappVerifyToken: text("whatsapp_verify_token"),
   whatsappAppSecret: text("whatsapp_app_secret"),
   apiSecret: text("api_secret"),
@@ -23,6 +23,13 @@ export const merchants = pgTable("merchants", {
   vendureChannelToken: text("vendure_channel_token"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const waitlist = pgTable("waitlist", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  businessName: text("business_name").notNull(),
+  whatsappNumber: text("whatsapp_number").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const webhookEvents = pgTable("webhook_events", {

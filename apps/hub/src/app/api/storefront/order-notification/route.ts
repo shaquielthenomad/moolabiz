@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -34,6 +35,9 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
   }
+
+  const { allowed, remaining } = await rateLimit(`rl:storefront-notify:${channelToken}`, 30, 60);
+  if (!allowed) return rateLimitResponse(remaining, 60);
 
   // Look up the merchant by channel token
   const [merchant] = await db

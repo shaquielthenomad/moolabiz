@@ -58,10 +58,8 @@ export function ProductsClient({
 
   const showAdvanced = ADVANCED_PLANS.includes(merchant.plan);
 
-  // All API calls now go through the hub's own dashboard API routes
-  const apiBase = merchant.useVendure
-    ? "/api/dashboard/products"
-    : `https://${merchant.slug}.bot.moolabiz.shop/api/products`;
+  // All API calls go through the hub's own dashboard API routes (Vendure backend)
+  const apiBase = "/api/dashboard/products";
 
   function showNotif(type: "error" | "success", message: string) {
     setNotification({ type, message });

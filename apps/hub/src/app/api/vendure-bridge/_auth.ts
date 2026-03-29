@@ -5,6 +5,7 @@
  * and returns the merchant record including vendureChannelToken.
  */
 
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
@@ -50,6 +51,15 @@ export async function authenticateBridgeRequest(
   if (!merchant) {
     return NextResponse.json(
       { error: "Invalid API key" },
+      { status: 401 }
+    );
+  }
+
+  const tokenBuf = Buffer.from(token);
+  const secretBuf = Buffer.from(merchant.apiSecret ?? "");
+  if (tokenBuf.length !== secretBuf.length || !crypto.timingSafeEqual(tokenBuf, secretBuf)) {
+    return NextResponse.json(
+      { error: "Invalid token" },
       { status: 401 }
     );
   }
