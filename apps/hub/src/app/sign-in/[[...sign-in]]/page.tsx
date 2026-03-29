@@ -9,7 +9,11 @@ function SignInContent() {
   const redirectUrl = params.get("redirect_url");
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex flex-col items-center justify-center px-4">
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl font-bold text-emerald-700">MoolaBiz</h1>
+        <p className="text-sm text-slate-500 mt-1">Your WhatsApp store</p>
+      </div>
       <SignIn
         fallbackRedirectUrl={redirectUrl || "/dashboard"}
         appearance={{
@@ -27,8 +31,8 @@ export default function SignInPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-gray-50">
-          <div className="w-10 h-10 border-3 border-slate-200 border-t-slate-700 rounded-full animate-spin" />
+        <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center">
+          <div className="w-10 h-10 border-3 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
         </div>
       }
     >

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DashboardNav } from "../dashboard-client";
 
 export default function SettingsClient({
   slug,
@@ -49,12 +50,9 @@ export default function SettingsClient({
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <nav className="flex items-center gap-4 mb-8 text-sm">
-        <a href="/dashboard" className="text-slate-400 hover:text-slate-600">Overview</a>
-        <a href="/dashboard/products" className="text-slate-400 hover:text-slate-600">Products</a>
-        <a href="/dashboard/orders" className="text-slate-400 hover:text-slate-600">Orders</a>
-        <span className="text-slate-900 font-medium">Settings</span>
-      </nav>
+      <div className="flex justify-center mb-8">
+        <DashboardNav current="settings" />
+      </div>
 
       <h1 className="text-2xl font-bold text-slate-900 mb-6">Payment Settings</h1>
 

@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     siteName: "MoolaBiz",
     images: [
       {
-        url: "/og-image.png",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
         alt: "MoolaBiz — Your WhatsApp Store",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     title: "MoolaBiz — Your WhatsApp Store. Always Open.",
     description:
       "Turn your WhatsApp into a 24/7 online store. Built for South African sellers.",
-    images: ["/og-image.png"],
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,

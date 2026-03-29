@@ -95,10 +95,15 @@ export async function POST(request: Request) {
     // Check for duplicate WhatsApp number
     const existingPhone = await db.select().from(merchants).where(eq(merchants.whatsappNumber, whatsappNumber)).limit(1);
     if (existingPhone.length > 0) {
-      return NextResponse.json(
-        { success: false, error: "This WhatsApp number is already registered. Log in to manage your store." } satisfies CheckoutResponse,
-        { status: 409 }
-      );
+      const existing = existingPhone[0];
+      if (existing.status !== "cancelled") {
+        return NextResponse.json(
+          { success: false, error: "This WhatsApp number is already registered. Log in to manage your store." } satisfies CheckoutResponse,
+          { status: 409 }
+        );
+      }
+      // Cancelled merchant — delete the old record so they can re-register cleanly
+      await db.delete(merchants).where(eq(merchants.id, existing.id));
     }
 
     // Generate secrets for the bot

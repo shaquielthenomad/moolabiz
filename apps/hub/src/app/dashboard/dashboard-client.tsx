@@ -106,7 +106,7 @@ function ExternalLinkIcon({ className }: { className?: string }) {
   );
 }
 
-function DashboardNav({ current }: { current: "overview" | "products" | "orders" }) {
+function DashboardNav({ current }: { current: "overview" | "products" | "orders" | "settings" }) {
   const tabs = [
     { id: "overview" as const, label: "Overview", href: "/dashboard" },
     { id: "products" as const, label: "Products", href: "/dashboard/products" },

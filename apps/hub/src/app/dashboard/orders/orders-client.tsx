@@ -30,9 +30,9 @@ interface MerchantInfo {
 // Vendure order states mapped to simple dashboard labels
 const VENDURE_STATE_LABELS: Record<string, string> = {
   AddingItems: "Draft",
-  ArrangingPayment: "Pending Payment",
+  ArrangingPayment: "Pending",
   // COD order accepted — waiting for merchant to collect cash
-  PaymentAuthorized: "COD — Collect Payment",
+  PaymentAuthorized: "Awaiting cash payment",
   PaymentSettled: "Paid",
   PartiallyShipped: "Partially Shipped",
   Shipped: "Shipped",

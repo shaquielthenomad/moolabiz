@@ -32,13 +32,6 @@ export async function POST(request: Request) {
     const eventId = event.id;
     const eventType = event.type;
 
-    // Idempotency check
-    const existing = await db.select().from(webhookEvents)
-      .where(eq(webhookEvents.eventId, eventId)).limit(1);
-    if (existing.length > 0) {
-      return NextResponse.json({ received: true, duplicate: true });
-    }
-
     // Store only essential fields — never persist full payload which may contain PII
     const safePayload = JSON.stringify({
       id: event.id,
@@ -47,13 +40,19 @@ export async function POST(request: Request) {
       livemode: event.livemode,
     });
 
-    // Store the event
-    await db.insert(webhookEvents).values({
+    // Atomic idempotency: INSERT … ON CONFLICT DO NOTHING eliminates the
+    // SELECT-then-INSERT race that could process the same event twice.
+    const inserted = await db.insert(webhookEvents).values({
       eventType,
       eventId,
       payload: safePayload,
       processed: false,
-    });
+    }).onConflictDoNothing().returning();
+
+    if (inserted.length === 0) {
+      // Row already existed — duplicate delivery from Stripe
+      return NextResponse.json({ received: true, duplicate: true });
+    }
 
     // Dispatch by event type — cast to generic shape for handlers
     const obj = event.data.object as unknown as Record<string, unknown>;

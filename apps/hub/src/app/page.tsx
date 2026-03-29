@@ -99,7 +99,7 @@ const FAQS = [
   {
     question: "How do my customers pay?",
     answer:
-      "We support Yoco, Ozow, and PayFast — South Africa's most trusted payment providers. Customers can pay by card or EFT directly through the WhatsApp conversation. Funds settle to your account as normal.",
+      "We currently support Cash on Delivery (COD) and EFT payments. Yoco, Ozow, and PayFast integrations are coming soon.",
   },
   {
     question: "Can I use my existing WhatsApp number?",
@@ -208,8 +208,19 @@ export default function Home() {
             </a>
           </div>
 
-          <p className="mt-5 text-sm text-slate-400">
+          <p className="text-sm text-slate-500 mt-4 flex items-center justify-center gap-2">
+            <span className="flex -space-x-2">
+              <span className="w-6 h-6 rounded-full bg-emerald-200 border-2 border-white inline-block"></span>
+              <span className="w-6 h-6 rounded-full bg-emerald-300 border-2 border-white inline-block"></span>
+              <span className="w-6 h-6 rounded-full bg-emerald-400 border-2 border-white inline-block"></span>
+            </span>
+            Join South African sellers already on MoolaBiz
+          </p>
+          <p className="mt-3 text-sm text-slate-400">
             Cancel anytime &middot; Live in under 10 minutes
+          </p>
+          <p className="mt-2 text-sm text-emerald-600 font-medium">
+            7-day money-back guarantee &mdash; try risk-free
           </p>
         </div>
       </section>
@@ -322,7 +333,7 @@ export default function Home() {
               {
                 title: "Payment integration",
                 description:
-                  "Accept payments via Yoco, Ozow, or PayFast. Customers pay by card or EFT without leaving the conversation.",
+                  "Accept COD and EFT payments today. Yoco, Ozow, and PayFast card integrations coming soon.",
                 icon: (
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
@@ -382,10 +393,10 @@ export default function Home() {
         <div className="max-w-screen-lg mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-semibold tracking-widest uppercase text-[#f59e0b] mb-3">
-              What sellers say
+              What merchants love about MoolaBiz
             </p>
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-              Real people, real results
+              Built for sellers like you
             </h2>
           </div>
 
@@ -416,7 +427,10 @@ export default function Home() {
                     {t.initial}
                   </div>
                   <div>
-                    <p className="font-semibold text-sm text-slate-900">{t.name}</p>
+                    <p className="font-semibold text-sm text-slate-900">
+                      {t.name}
+                      <span className="ml-1.5 text-[10px] font-normal text-slate-400">(Example)</span>
+                    </p>
                     <p className="text-xs text-slate-400">{t.business} &middot; {t.location}</p>
                   </div>
                 </div>
@@ -632,7 +646,7 @@ function SignupForm({
           placeholder="e.g. Lindiwe's Cakes"
           value={formData.businessName}
           onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base transition-colors"
+          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-base transition-colors"
         />
       </div>
 
@@ -647,7 +661,7 @@ function SignupForm({
           placeholder="you@example.com"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base transition-colors"
+          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-base transition-colors"
         />
         <p className="text-xs text-slate-400 mt-1.5">We&apos;ll send your store details here.</p>
       </div>
@@ -669,7 +683,7 @@ function SignupForm({
             if (!val.startsWith("+")) val = "+" + val;
             setFormData({ ...formData, whatsappNumber: val });
           }}
-          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base transition-colors"
+          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-base transition-colors"
         />
         <p className="text-xs text-slate-400 mt-1.5">Your number stays private. We never share it.</p>
       </div>
@@ -688,11 +702,11 @@ function SignupForm({
               paymentProvider: e.target.value as SignupFormData["paymentProvider"],
             })
           }
-          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base transition-colors"
+          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-base transition-colors"
         >
           <option value="yoco">Yoco</option>
-          <option value="ozow">Ozow (coming soon)</option>
-          <option value="payfast">PayFast (coming soon)</option>
+          <option value="ozow" disabled>Ozow (coming soon)</option>
+          <option value="payfast" disabled>PayFast (coming soon)</option>
         </select>
       </div>
 
@@ -703,8 +717,9 @@ function SignupForm({
         Choose a plan &rarr;
       </button>
 
-      <p className="text-xs text-slate-400 text-center">
-        Pay monthly &middot; Cancel anytime &middot; No contracts
+      <p className="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1.5">
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Secured by Stripe &bull; Cancel anytime &bull; No contracts
       </p>
     </form>
   );

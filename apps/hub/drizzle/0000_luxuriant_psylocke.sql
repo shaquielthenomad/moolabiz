@@ -4,7 +4,7 @@ CREATE TABLE "merchants" (
 	"slug" text NOT NULL,
 	"whatsapp_number" text NOT NULL,
 	"payment_provider" text NOT NULL,
-	"plan" text DEFAULT 'starter' NOT NULL,
+	"plan" text DEFAULT 'starter' NOT NULL, -- DRIFT: schema.ts uses 'solopreneur'; existing rows with 'starter' were migrated via SQL on 2026-03-29
 	"status" text DEFAULT 'pending' NOT NULL,
 	"coolify_app_uuid" text,
 	"subdomain" text,
