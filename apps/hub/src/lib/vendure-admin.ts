@@ -379,8 +379,15 @@ export async function createDefaultShippingMethod(
 /**
  * Create a default payment method (Cash on Delivery / EFT / Direct Transfer)
  * assigned to a merchant's channel.
- * Uses the built-in dummy-payment-handler which auto-settles — perfect for
- * offline payment collection (cash, EFT, mobile money).
+ *
+ * Uses the built-in dummy-payment-handler with automaticSettle=false so that
+ * placing an order moves it to "PaymentAuthorized" (order accepted, cash not
+ * yet collected) rather than "PaymentSettled" (paid). The merchant must
+ * explicitly "Mark as Paid" in the dashboard to settle the payment.
+ *
+ * NOTE: Existing merchants whose payment method was provisioned with
+ * automaticSettle=true will need a one-off update via the Vendure admin UI
+ * or a migration script — this only affects newly provisioned channels.
  */
 export async function createDefaultPaymentMethod(
   channelId: string
@@ -409,7 +416,9 @@ export async function createDefaultPaymentMethod(
         handler: {
           code: "dummy-payment-handler",
           arguments: [
-            { name: "automaticSettle", value: "true" },
+            // automaticSettle=false → order lands in PaymentAuthorized, not
+            // PaymentSettled. Merchant settles manually via "Mark as Paid".
+            { name: "automaticSettle", value: "false" },
           ],
         },
       },

@@ -244,6 +244,7 @@ export const LIST_ORDERS_QUERY = `
           productVariant { id name sku product { id name } }
         }
         shippingAddress { fullName streetLine1 city province postalCode country phoneNumber }
+        payments { id state }
       }
     }
   }
@@ -263,6 +264,26 @@ export const TRANSITION_ORDER_STATE_MUTATION = `
         transitionError
         fromState
         toState
+      }
+    }
+  }
+`;
+
+/**
+ * Settle a payment (move it from Authorized → Settled).
+ * Used for COD orders when the merchant has physically collected payment.
+ * After settling the payment, the order automatically moves to PaymentSettled.
+ */
+export const SETTLE_PAYMENT_MUTATION = `
+  mutation SettlePayment($id: ID!) {
+    settlePayment(id: $id) {
+      ... on Payment {
+        id
+        state
+      }
+      ... on ErrorResult {
+        errorCode
+        message
       }
     }
   }

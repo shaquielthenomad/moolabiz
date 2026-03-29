@@ -91,3 +91,29 @@ export async function getOpenClawStatus(
   const res = await provisionerRequest("/status", { slug });
   return (await res.json()) as { state: string };
 }
+
+/**
+ * Send a WhatsApp notification message via the merchant's OpenClaw container.
+ *
+ * This is a fire-and-forget helper — callers should catch errors and not
+ * let notification failures block the main flow.
+ */
+export async function sendWhatsAppNotification(opts: {
+  slug: string;
+  phone: string;
+  message: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await provisionerRequest("/notify", {
+      slug: opts.slug,
+      phone: opts.phone,
+      message: opts.message,
+    });
+    const data = (await res.json()) as { ok?: boolean; error?: string };
+    return { ok: data.ok ?? true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[openclaw] sendWhatsAppNotification failed for ${opts.slug}:`, message);
+    return { ok: false, error: message };
+  }
+}

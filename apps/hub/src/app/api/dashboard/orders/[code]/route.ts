@@ -4,7 +4,7 @@ import {
   vendureAdminQuery,
   LIST_ORDERS_QUERY,
   TRANSITION_ORDER_STATE_MUTATION,
-  simplifyOrder,
+  SETTLE_PAYMENT_MUTATION,
 } from "@/lib/vendure";
 
 // Allowed target states for dashboard users
@@ -17,8 +17,16 @@ const ALLOWED_TRANSITIONS = new Set([
 /**
  * PATCH /api/dashboard/orders/[code]
  *
- * Transition an order to a new state.
- * Body: { state: "Shipped" | "Delivered" | "Cancelled" }
+ * Two actions are supported via the request body:
+ *
+ * 1. State transition:
+ *    Body: { state: "Shipped" | "Delivered" | "Cancelled" }
+ *    Transitions the order to the given fulfillment state.
+ *
+ * 2. Settle payment (COD "Mark as Paid"):
+ *    Body: { action: "settle" }
+ *    Settles the order's Authorized payment, which moves the order from
+ *    PaymentAuthorized → PaymentSettled. Used when the merchant collects cash.
  */
 export async function PATCH(
   request: NextRequest,
@@ -37,18 +45,17 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { state } = body as { state?: string };
-  if (!state || !ALLOWED_TRANSITIONS.has(state)) {
-    return NextResponse.json(
-      { error: `Invalid state. Allowed: ${[...ALLOWED_TRANSITIONS].join(", ")}` },
-      { status: 400 }
-    );
-  }
-
+  // ── Look up the order (needed for both actions) ──────────────────────────
   try {
-    // Look up the order by code within the merchant's channel
     const listData = await vendureAdminQuery<{
-      orders: { items: Array<{ id: string; code: string; state: string }> };
+      orders: {
+        items: Array<{
+          id: string;
+          code: string;
+          state: string;
+          payments?: Array<{ id: string; state: string }>;
+        }>;
+      };
     }>(vendureChannelToken, LIST_ORDERS_QUERY, {
       options: {
         take: 1,
@@ -61,7 +68,65 @@ export async function PATCH(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Transition the order state
+    // ── Action: settle COD payment ─────────────────────────────────────────
+    if ((body as { action?: string }).action === "settle") {
+      // Find the Authorized payment on this order
+      const authorizedPayment = order.payments?.find(
+        (p) => p.state === "Authorized"
+      );
+
+      if (!authorizedPayment) {
+        return NextResponse.json(
+          {
+            error:
+              "No authorized payment found on this order. It may already be settled or not yet authorized.",
+          },
+          { status: 422 }
+        );
+      }
+
+      // Settle the payment — Vendure will automatically advance the order to
+      // PaymentSettled once all payments are settled.
+      const settleResult = await vendureAdminQuery<{
+        settlePayment: {
+          id?: string;
+          state?: string;
+          errorCode?: string;
+          message?: string;
+        };
+      }>(vendureChannelToken, SETTLE_PAYMENT_MUTATION, {
+        id: authorizedPayment.id,
+      });
+
+      const settled = settleResult.settlePayment;
+      if (settled.errorCode) {
+        return NextResponse.json(
+          { error: settled.message || "Failed to settle payment" },
+          { status: 422 }
+        );
+      }
+
+      // Return the updated order state (PaymentSettled after settle)
+      return NextResponse.json({
+        id: order.id,
+        code: order.code,
+        state: "PaymentSettled",
+        paymentId: settled.id,
+        paymentState: settled.state,
+      });
+    }
+
+    // ── Action: state transition ───────────────────────────────────────────
+    const { state } = body as { state?: string };
+    if (!state || !ALLOWED_TRANSITIONS.has(state)) {
+      return NextResponse.json(
+        {
+          error: `Invalid request. Provide { state: "${[...ALLOWED_TRANSITIONS].join('" | "')}" } or { action: "settle" }`,
+        },
+        { status: 400 }
+      );
+    }
+
     const result = await vendureAdminQuery<{
       transitionOrderToState: {
         id?: string;

@@ -541,6 +541,122 @@ async function handleQR(req, res) {
   }
 }
 
+/**
+ * handleNotify — send a WhatsApp message to a phone number via a merchant's
+ * OpenClaw container.
+ *
+ * Uses the OpenClaw gateway's WebSocket protocol to send a DM.
+ * The container must be running and WhatsApp must be connected.
+ *
+ * Body: { slug, phone, message }
+ *   - slug:    merchant slug (container = openclaw-{slug})
+ *   - phone:   recipient phone number (e.g. "27612345678")
+ *   - message: text message to send
+ */
+async function handleNotify(req, res) {
+  const [body, err] = await parseBody(req, res);
+  if (err) return;
+  const { slug, phone, message } = body;
+
+  if (!slug || !phone || !message) {
+    return json(res, 400, { error: "Missing required fields: slug, phone, message" });
+  }
+
+  let s;
+  try {
+    s = sanitizeSlug(slug);
+  } catch {
+    return json(res, 400, { error: "Invalid slug" });
+  }
+
+  // Normalize phone number: strip +, spaces, dashes
+  const normalizedPhone = String(phone).replace(/[^0-9]/g, "");
+  if (!normalizedPhone || normalizedPhone.length < 10) {
+    return json(res, 400, { error: "Invalid phone number" });
+  }
+
+  // Check container is running
+  try {
+    const state = execFileSync(
+      "docker",
+      ["inspect", "-f", "{{.State.Status}}", `openclaw-${s}`],
+      { encoding: "utf-8", timeout: 5000 }
+    ).trim();
+    if (state !== "running") {
+      return json(res, 503, { error: `Container is ${state}, not running` });
+    }
+  } catch {
+    return json(res, 503, { error: "Container not found" });
+  }
+
+  // Send the message via docker exec + a Node.js one-liner that connects
+  // to the local OpenClaw gateway WebSocket and sends a DM.
+  //
+  // The WS protocol:
+  //   Request:  { type: "req", id: "<uuid>", method: "channels.send", params: {...} }
+  //   Response: { type: "res", id: "<uuid>", ok: true|false, payload|error }
+  //
+  // We use the whatsapp channel to send a message to the phone number.
+  // The OpenClaw gateway accepts connections on ws://localhost:18789.
+  const wsScript = `
+    const WebSocket = require('ws');
+    const ws = new WebSocket('ws://localhost:18789');
+    const id = 'notify-' + Date.now();
+    const timeout = setTimeout(() => { process.exit(1); }, 15000);
+    ws.on('open', () => {
+      // Wait for hello-ok before sending
+    });
+    ws.on('message', (data) => {
+      try {
+        const msg = JSON.parse(data);
+        if (msg.type === 'res' && msg.payload && msg.payload.type === 'hello-ok') {
+          // Authenticated, now send the message
+          ws.send(JSON.stringify({
+            type: 'req',
+            id: id,
+            method: 'channels.send',
+            params: {
+              channel: 'whatsapp',
+              to: '${normalizedPhone}@s.whatsapp.net',
+              message: ${JSON.stringify(message)}
+            }
+          }));
+        }
+        if (msg.type === 'res' && msg.id === id) {
+          clearTimeout(timeout);
+          if (msg.ok) {
+            process.stdout.write('OK');
+          } else {
+            process.stderr.write(JSON.stringify(msg.error || 'send failed'));
+          }
+          ws.close();
+          process.exit(msg.ok ? 0 : 1);
+        }
+      } catch {}
+    });
+    ws.on('error', (e) => { process.stderr.write(e.message); process.exit(1); });
+  `.replace(/\n/g, " ");
+
+  try {
+    const { stdout, stderr, err: execErr } = await execFileAsync(
+      "docker",
+      ["exec", `openclaw-${s}`, "node", "-e", wsScript],
+      20000
+    );
+
+    if (execErr) {
+      console.error(`[provisioner] notify ${s} failed:`, stderr);
+      return json(res, 502, { error: "Failed to send WhatsApp message", detail: stderr });
+    }
+
+    console.log(`[provisioner] notify ${s} -> ${normalizedPhone}: sent`);
+    return json(res, 200, { ok: true });
+  } catch (e) {
+    console.error(`[provisioner] notify ${s} error:`, e.message);
+    return json(res, 502, { error: "Failed to send notification", detail: e.message });
+  }
+}
+
 // ─── Server ────────────────────────────────────────────────────────
 
 const routes = {
@@ -550,6 +666,7 @@ const routes = {
   "/remove": handleRemove,
   "/status": handleStatus,
   "/qr": handleQR,
+  "/notify": handleNotify,
 };
 
 const server = http.createServer(async (req, res) => {

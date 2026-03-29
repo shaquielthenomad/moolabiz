@@ -1,6 +1,6 @@
 'use server';
 
-import {mutate} from '@/lib/vendure/api';
+import {mutate, query} from '@/lib/vendure/api';
 import {
     SetOrderShippingAddressMutation,
     SetOrderBillingAddressMutation,
@@ -10,8 +10,12 @@ import {
     TransitionOrderToStateMutation,
     SetCustomerForOrderMutation,
 } from '@/lib/vendure/mutations';
+import {GetActiveOrderForCheckoutQuery} from '@/lib/vendure/queries';
 import {revalidatePath, updateTag} from 'next/cache';
 import {redirect} from "next/navigation";
+import {headers as getHeaders} from 'next/headers';
+
+const HUB_API_URL = process.env.HUB_API_URL || 'https://moolabiz.shop';
 
 interface AddressInput {
     fullName: string;
@@ -97,6 +101,33 @@ export async function transitionToArrangingPayment() {
 }
 
 export async function placeOrder(paymentMethodCode: string) {
+    // Grab active order details before payment (for the merchant notification)
+    let customerName = 'Guest';
+    let totalWithTax = 0;
+    let totalQuantity = 0;
+    let shippingAddress = '';
+    try {
+        const activeOrder = await query(GetActiveOrderForCheckoutQuery, undefined, {
+            useAuthToken: true,
+        });
+        const order = activeOrder.data.activeOrder;
+        if (order) {
+            if (order.customer) {
+                customerName = `${order.customer.firstName} ${order.customer.lastName}`.trim();
+            }
+            totalWithTax = order.totalWithTax;
+            totalQuantity = order.totalQuantity;
+            if (order.shippingAddress) {
+                const addr = order.shippingAddress;
+                shippingAddress = [addr.streetLine1, addr.city, addr.province]
+                    .filter(Boolean)
+                    .join(', ');
+            }
+        }
+    } catch {
+        // Non-critical — continue with order placement even if we can't read details
+    }
+
     // First, transition the order to ArrangingPayment state
     await transitionToArrangingPayment();
 
@@ -131,11 +162,65 @@ export async function placeOrder(paymentMethodCode: string) {
 
     const orderCode = result.data.addPaymentToOrder.code;
 
+    // Send merchant notification (non-blocking — fire and forget)
+    // This must happen before redirect() which throws
+    sendOrderNotification({
+        orderCode,
+        customerName,
+        total: totalWithTax,
+        itemCount: totalQuantity,
+        shippingAddress: shippingAddress || undefined,
+    }).catch((err) => {
+        console.error('[checkout] Order notification failed (non-blocking):', err);
+    });
+
     // Update the cart tag to immediately invalidate cached cart data
     updateTag('cart');
     updateTag('active-order');
 
     redirect(`/order-confirmation/${orderCode}`);
+}
+
+/**
+ * Fire-and-forget: notify the merchant about a new order via the Hub API.
+ * Uses the Vendure channel token (from middleware) to authenticate.
+ */
+async function sendOrderNotification(orderDetails: {
+    orderCode: string;
+    customerName: string;
+    total: number;
+    itemCount: number;
+    shippingAddress?: string;
+}): Promise<void> {
+    try {
+        const hdrs = await getHeaders();
+        const channelToken = hdrs.get('x-vendure-channel-token');
+
+        if (!channelToken) {
+            console.warn('[checkout] No channel token available, skipping order notification');
+            return;
+        }
+
+        const res = await fetch(
+            `${HUB_API_URL}/api/storefront/order-notification`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-vendure-channel-token': channelToken,
+                },
+                body: JSON.stringify(orderDetails),
+            }
+        );
+
+        if (!res.ok) {
+            const text = await res.text();
+            console.error(`[checkout] Order notification HTTP ${res.status}:`, text);
+        }
+    } catch (err) {
+        // Swallow — notification must never block checkout
+        console.error('[checkout] Order notification error:', err);
+    }
 }
 
 interface GuestCustomerInput {

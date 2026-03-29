@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, SignUp } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -109,16 +109,6 @@ function SetupContent() {
   const [status, setStatus] = useState<ProvisionStatus>("loading");
   const [error, setError] = useState("");
 
-  // Redirect unauthenticated merchants to sign-up, preserving query params
-  // so they return here after creating their Clerk account.
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) {
-      const returnUrl = `/setup-complete?slug=${encodeURIComponent(slug)}&session_id=${encodeURIComponent(sessionId)}`;
-      window.location.href = `/sign-up?redirect_url=${encodeURIComponent(returnUrl)}`;
-    }
-  }, [isLoaded, isSignedIn, slug, sessionId]);
-
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     if (slug === "your-business") return;
@@ -186,6 +176,85 @@ function SetupContent() {
       active: status === "success",
     },
   ];
+
+  // While Clerk is loading, show a spinner
+  if (!isLoaded) {
+    return (
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center space-y-5">
+            <div
+              role="status"
+              aria-label="Loading"
+              className="mx-auto w-10 h-10 border-3 border-slate-200 border-t-slate-700 rounded-full animate-spin"
+            />
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Setting up your store</h1>
+              <p className="text-sm text-slate-500 mt-1">Just a moment...</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // After payment, if the user doesn't have a Clerk account yet, show inline
+  // sign-up right here instead of redirecting away. This avoids the jarring
+  // experience of paying and THEN being asked to create an account on a
+  // separate page.
+  if (!isSignedIn) {
+    const currentUrl = `/setup-complete?slug=${encodeURIComponent(slug)}&session_id=${encodeURIComponent(sessionId)}`;
+    return (
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+        <div className="max-w-md w-full space-y-4">
+          {/* Context card */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-emerald-600 px-6 py-5 text-center">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
+                <CheckCircleIcon className="w-6 h-6 text-white" />
+              </div>
+              <h1 className="text-lg font-bold text-white">Payment confirmed</h1>
+              <p className="text-emerald-100 text-sm mt-1">
+                One last step — create your account to finish setup
+              </p>
+            </div>
+            <div className="px-6 py-4 text-left">
+              <StepList
+                steps={[
+                  { label: "Payment confirmed", detail: "Your subscription is active", done: true, active: false },
+                  { label: "Create your account", detail: "So you can manage your store", done: false, active: true },
+                  { label: "Store deployment", detail: "Starts automatically after sign-up", done: false, active: false },
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* Inline Clerk sign-up */}
+          <div className="flex justify-center">
+            <SignUp
+              fallbackRedirectUrl={currentUrl}
+              appearance={{
+                elements: {
+                  rootBox: "w-full",
+                  card: "shadow-sm border border-slate-200 rounded-xl",
+                },
+              }}
+            />
+          </div>
+
+          <p className="text-center text-xs text-slate-400">
+            Already have an account?{" "}
+            <a
+              href={`/sign-in?redirect_url=${encodeURIComponent(currentUrl)}`}
+              className="text-emerald-600 hover:underline"
+            >
+              Sign in
+            </a>
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">

@@ -31,7 +31,8 @@ interface MerchantInfo {
 const VENDURE_STATE_LABELS: Record<string, string> = {
   AddingItems: "Draft",
   ArrangingPayment: "Pending Payment",
-  PaymentAuthorized: "Payment Authorized",
+  // COD order accepted — waiting for merchant to collect cash
+  PaymentAuthorized: "COD — Collect Payment",
   PaymentSettled: "Paid",
   PartiallyShipped: "Partially Shipped",
   Shipped: "Shipped",
@@ -40,7 +41,8 @@ const VENDURE_STATE_LABELS: Record<string, string> = {
   Cancelled: "Cancelled",
 };
 
-// Which states can advance, and to what
+// Which states can advance via a simple state transition, and to what.
+// PaymentAuthorized is handled separately via the "settle" action.
 const VENDURE_NEXT_STATE: Record<string, string> = {
   PaymentSettled: "Shipped",
   Shipped: "Delivered",
@@ -55,7 +57,8 @@ function StatusBadge({ status }: { status: string }) {
   const configMap: Record<string, string> = {
     AddingItems: "bg-slate-50 text-slate-600 border-slate-200",
     ArrangingPayment: "bg-amber-50 text-amber-700 border-amber-200",
-    PaymentAuthorized: "bg-amber-50 text-amber-700 border-amber-200",
+    // COD order awaiting cash collection — amber to signal merchant action required
+    PaymentAuthorized: "bg-amber-100 text-amber-800 border-amber-300",
     PaymentSettled: "bg-blue-50 text-blue-700 border-blue-200",
     Shipped: "bg-indigo-50 text-indigo-700 border-indigo-200",
     Delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -119,6 +122,40 @@ export function OrdersClient({
       } else {
         const err = await res.json().catch(() => ({}));
         showNotif("error", err.error || "Could not update order.");
+      }
+    } catch {
+      showNotif("error", "Could not connect. Please try again.");
+    }
+    setLoading("");
+  }
+
+  /**
+   * Settle a COD payment — called when merchant clicks "Mark as Paid".
+   * Sends { action: "settle" } to the PATCH endpoint, which calls Vendure's
+   * settlePayment mutation and moves the order from PaymentAuthorized → PaymentSettled.
+   */
+  async function handleSettlePayment(order: Order) {
+    setLoading(order.id);
+    try {
+      const res = await fetch(`/api/dashboard/orders/${order.code}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "settle" }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === order.id
+              ? { ...o, status: data.state || "PaymentSettled" }
+              : o
+          )
+        );
+        showNotif("success", "Payment marked as collected. Order is now Paid.");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showNotif("error", err.error || "Could not settle payment.");
       }
     } catch {
       showNotif("error", "Could not connect. Please try again.");
@@ -262,6 +299,19 @@ export function OrdersClient({
                           </span>
                         </div>
                       </div>
+
+                      {/* COD: merchant must confirm cash was collected */}
+                      {order.status === "PaymentAuthorized" && (
+                        <button
+                          onClick={() => handleSettlePayment(order)}
+                          disabled={loading === order.id}
+                          className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm py-2 rounded-lg transition-colors disabled:opacity-50 mb-2"
+                        >
+                          {loading === order.id
+                            ? "Processing..."
+                            : "Mark as Paid (Cash Collected)"}
+                        </button>
+                      )}
 
                       {nextState && (
                         <button
