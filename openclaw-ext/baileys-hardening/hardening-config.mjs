@@ -196,12 +196,16 @@ export function applyBaileysHardening(accountCfg = {}) {
  * @param {string[]} slugs
  * @returns {{ accounts: Record<string, object> }}
  */
-export function buildHardenedAccountsBlock(slugs) {
+export function buildHardenedAccountsBlock(slugs, opts = {}) {
+  const stateRoot = opts.stateRoot || "/root/.openclaw";
   const accounts = {};
   for (const slug of slugs) {
     accounts[slug] = applyBaileysHardening({
       name: slug,
       enabled: true,
+      // REQUIRED: a distinct Baileys auth dir per account, or two merchants in a
+      // packed profile collide on one WhatsApp session. [red-team LSD-6]
+      authDir: `${stateRoot}/wa-auth/${slug}`,
     });
   }
   return { accounts };
