@@ -1,0 +1,14 @@
+{
+  "name": "@moolabiz/openclaw-shop-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MoolaBiz read-only shop tools (my_orders, order_status) for the customer-facing agent, scoped to the verified WhatsApp sender.",
+  "main": "index.ts",
+  "dependencies": {
+    "typebox": "*"
+  },
+  "peerDependencies": {
+    "openclaw": "*"
+  }
+}
