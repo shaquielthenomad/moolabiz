@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateBridgeRequest, isErrorResponse } from "../_auth";
 import { vendureAdminQuery, simplifyOrder } from "@/lib/vendure";
+import { signTrackToken } from "@/lib/links";
 
 /**
  * GET /api/vendure-bridge/customer-orders?phone=<E164>&take=20
@@ -105,7 +106,12 @@ export async function GET(request: NextRequest) {
       (o.channels || []).some((c) => c?.token === auth.vendureChannelToken),
     );
 
-    const orders = ownOrders.map(simplifyOrder);
+    const base = (process.env.APP_BASE_URL || "https://moolabiz.shop").replace(/\/+$/, "");
+    const orders = ownOrders.map(simplifyOrder).map((o) => ({
+      ...o,
+      // Signed, expiring, un-guessable status link the bot can send the customer.
+      trackUrl: `${base}/api/track/${signTrackToken({ slug: auth.slug, orderCode: o.code })}`,
+    }));
     return NextResponse.json({
       customer: {
         name: [customer.firstName, customer.lastName].filter(Boolean).join(" ") || null,
