@@ -40,6 +40,14 @@ export function buildMerchantAgents(m, opts = {}) {
   const adminId = `${m.slug}-admin`;
   const shopId = `${m.slug}-shop`;
   const ownerJid = phoneToWhatsAppJid(m.ownerPhone);
+  if (!ownerJid) {
+    // Refuse to provision without a verified owner number: the owner -> admin peer
+    // binding IS the owner-vs-customer gate. No owner JID = no admin routing, and an
+    // account-wide admin binding would be ambiguous. Fail fast. [red-team H4 fix]
+    throw new Error(
+      `buildMerchantAgents(${m.slug}): a verified owner WhatsApp number is required (owner -> admin routing).`,
+    );
+  }
   const biz = m.businessName || m.slug;
 
   const agents = [
@@ -70,7 +78,7 @@ export function buildMerchantAgents(m, opts = {}) {
       match: {
         channel: "whatsapp",
         accountId: m.slug,
-        ...(ownerJid ? { peer: { kind: "direct", id: ownerJid } } : {}),
+        peer: { kind: "direct", id: ownerJid }, // ownerJid guaranteed (throws above)
       },
     },
     // Everyone else on this merchant's WhatsApp account -> shop agent (unknown = customer).
@@ -122,7 +130,11 @@ export function buildProfileConfig(merchants, opts = {}) {
 
   return {
     gateway: {
-      controlUi: { dangerouslyAllowHostHeaderOriginFallback: true, root: `${themeDir}/` },
+      // SECURITY [red-team M1]: do NOT enable dangerouslyAllowHostHeaderOriginFallback
+      // on a packed multi-tenant gateway — it would expose the control UI across every
+      // hosted merchant. Configure an explicit control-UI origin allowlist for your
+      // OpenClaw version instead, and keep the control UI off the public internet.
+      controlUi: { root: `${themeDir}/` },
     },
     channels: {
       whatsapp: { accounts },

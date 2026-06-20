@@ -56,6 +56,7 @@ provisioner just consumes it.
 - Binding precedence: confirm the most-specific binding (owner `peer`) is chosen over the account-default binding.
 - `peer.id` format for WhatsApp DMs (JID `<digits>@s.whatsapp.net` vs E.164) — adjust `phoneToWhatsAppJid` if needed.
 - The `"minimal"` tool profile: confirm it still lets the agent send normal chat replies (replies are not a gated tool) and excludes fs/exec from these customer-facing agents.
-- Config **reload** semantics: confirm appending to `agents.list` + `bindings` + `channels.whatsapp.accounts` and reloading attaches a new merchant without restarting the whole process (and without disrupting other merchants' live WhatsApp sessions).
+- **Config reload is NOT zero-downtime for WhatsApp (red-team H1, CONFIRMED):** changing `channels.whatsapp.accounts.*` restarts the *entire* whatsapp channel (every account on that process), so adding merchant N reconnects all live merchants on that gateway. **Onboard new merchants to a fresh / not-yet-live gateway**, pre-provision `enabled:false` slots, batch onboarding into low-traffic windows, and stagger reconnects — never casually mutate a live process's accounts.
 - Memory per agent under load → set `merchantsPerGateway` from real numbers.
-- Apply the per-agent credential read in `moolabiz-tools` / `moolabiz-shop-tools` (above).
+- Per-agent credential read in `moolabiz-tools` / `moolabiz-shop-tools` — DONE: both read `{workspaceDir}/moolabiz.json`, and refuse a shared config/env fallback when `MOOLABIZ_PACKED` is set (red-team H3). Set `MOOLABIZ_PACKED=1` on packed gateway containers.
+- **Proxy is per-PROCESS, not per-session (red-team H2):** `HTTPS_PROXY` is read once at socket creation, so every merchant in a packed gateway shares one egress IP and one ban blast-radius. Run **one gateway process per proxy IP** with a small merchant count; do not pack many real numbers behind a single IP. This caps practical density below the raw memory limit.
