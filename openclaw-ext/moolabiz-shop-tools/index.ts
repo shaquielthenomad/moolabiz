@@ -29,6 +29,7 @@ interface SimpleOrder {
   currency: string;
   createdAt: string;
   items: Array<{ name: string; quantity: number }>;
+  trackUrl?: string; // signed status link from the bridge (PR8)
 }
 
 /**
@@ -142,7 +143,10 @@ export default defineToolPlugin({
             }
             const who = data.customer?.name ? `${data.customer.name}, here` : "Here";
             const lines = data.orders
-              .map((o) => `• ${o.code} — R${rands(o.total)} — ${o.status}`)
+              .map(
+                (o) =>
+                  `• ${o.code} — R${rands(o.total)} — ${o.status}${o.trackUrl ? `\n  Track: ${o.trackUrl}` : ""}`,
+              )
               .join("\n");
             return { content: [{ type: "text", text: `${who} are your recent orders:\n${lines}` }], details: data };
           },
@@ -178,11 +182,12 @@ export default defineToolPlugin({
               return text(`I couldn't find order ${code} on your number. Double-check the code?`);
             }
             const items = (match.items || []).map((i) => `${i.quantity}x ${i.name}`).join(", ");
+            const track = match.trackUrl ? `\nTrack it: ${match.trackUrl}` : "";
             return {
               content: [
                 {
                   type: "text",
-                  text: `Order ${match.code}: ${match.status} — R${rands(match.total)}${items ? ` (${items})` : ""}.`,
+                  text: `Order ${match.code}: ${match.status} — R${rands(match.total)}${items ? ` (${items})` : ""}.${track}`,
                 },
               ],
               details: match,
