@@ -1,0 +1,18 @@
+{
+  "id": "moolabiz-tools",
+  "activation": { "onStartup": true },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "catalogUrl": {
+        "type": "string",
+        "description": "Vendure bridge base URL, e.g. https://moolabiz.shop/api/vendure-bridge"
+      },
+      "apiSecret": {
+        "type": "string",
+        "description": "Merchant bridge Bearer token (apiSecret)"
+      }
+    }
+  }
+}
