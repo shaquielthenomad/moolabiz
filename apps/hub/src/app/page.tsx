@@ -220,7 +220,7 @@ export default function Home() {
             Cancel anytime &middot; Live in under 10 minutes
           </p>
           <p className="mt-2 text-sm text-emerald-600 font-medium">
-            7-day money-back guarantee &mdash; try risk-free
+            No setup fees &middot; Cancel anytime, no contracts
           </p>
         </div>
       </section>

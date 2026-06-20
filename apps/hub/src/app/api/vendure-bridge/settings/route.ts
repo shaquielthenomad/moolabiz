@@ -6,6 +6,7 @@ import {
 import { db } from "@/lib/db";
 import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { encryptSecret } from "@/lib/crypto";
 
 /**
  * POST /api/vendure-bridge/settings
@@ -39,7 +40,9 @@ export async function POST(request: NextRequest) {
     await db
       .update(merchants)
       .set({
-        paymentSecretKey,
+        // Encrypt the merchant's payment-provider secret at rest (AES-256-GCM).
+        // Consumers must read it back via decryptSecret() from "@/lib/crypto".
+        paymentSecretKey: encryptSecret(paymentSecretKey),
         updatedAt: new Date(),
       })
       .where(eq(merchants.id, auth.id));
