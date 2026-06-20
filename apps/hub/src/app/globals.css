@@ -1,27 +1,99 @@
 @import "tailwindcss";
 
+/* ──────────────────────────────────────────────────────────────────────────
+   MoolaBiz design system — warm, grounded, proudly local.
+   "The warmth of a spaza, the competence of a bank."
+   Canvas is warm sand (not clinical white); green is an owned forest, not
+   borrowed WhatsApp-green; gold is the dedicated "moola"/money accent.
+   ────────────────────────────────────────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --background: #faf7f2;
+  --foreground: #1c2b27;
 }
 
 @theme inline {
+  /* Surfaces */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-navy: #0f172a;
-  --color-amber: #f59e0b;
-  --color-green: #059669;
-  --color-green-hover: #047857;
-  --font-sans: var(--font-geist-sans);
+  --color-canvas: #faf7f2;
+  --color-canvas-sunk: #f2ece2;
+  --color-surface: #ffffff;
+
+  /* Text */
+  --color-ink: #1c2b27;
+  --color-ink-muted: #5b6b66;
+
+  /* Brand — primary action (owned forest green) */
+  --color-primary: #0e7c5a;
+  --color-primary-hover: #0a6248;
+  --color-primary-tint: #e4f2ec;
+  --color-secondary: #143a33;
+
+  /* Moola — the money accent (honey gold) */
+  --color-moola: #f0a92b;
+  --color-moola-deep: #c77e12;
+  --color-moola-tint: #fbefd6;
+
+  /* Semantic */
+  --color-success: #0e7c5a;
+  --color-success-tint: #e4f2ec;
+  --color-warn: #b5790f;
+  --color-warn-tint: #fbefd6;
+  --color-error: #c0362c;
+  --color-error-tint: #fbe9e7;
+
+  /* Lines */
+  --color-hairline: #e7dfd3;
+  --color-hairline-strong: #d8cfc0;
+
+  /* Dark surfaces (sidebar, dark sections, footers) */
+  --color-dark-base: #0f2a24;
+  --color-dark-raised: #163a32;
+  --color-dark-hairline: #234a42;
+  --color-dark-text: #eaf1ee;
+  --color-dark-muted: #9cb3ac;
+
+  /* Legacy aliases (kept so older class references don't break) */
+  --color-navy: #143a33;
+  --color-amber: #f0a92b;
+  --color-green: #0e7c5a;
+  --color-green-hover: #0a6248;
+
+  /* Typography */
+  --font-sans: var(--font-text);
+  --font-display: var(--font-display);
+  --font-text: var(--font-text);
   --font-mono: var(--font-geist-mono);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+
+  /* Elevation — warm, two-layer shadows (tinted toward pine, not pure black) */
+  --shadow-card: 0 1px 2px rgba(28, 43, 39, 0.06), 0 4px 12px rgba(28, 43, 39, 0.05);
+  --shadow-card-hover: 0 2px 4px rgba(28, 43, 39, 0.08), 0 12px 28px rgba(28, 43, 39, 0.09);
+  --shadow-pop: 0 8px 24px rgba(15, 42, 36, 0.16), 0 2px 6px rgba(15, 42, 36, 0.1);
+  --shadow-key: 0 10px 30px rgba(14, 124, 90, 0.22);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-text), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Subtle slide-up for page sections — used sparingly */

@@ -16,14 +16,38 @@ export default async function Image() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#059669',
-          color: 'white',
+          backgroundColor: '#0f2a24',
+          color: '#eaf1ee',
           fontFamily: 'sans-serif',
         }}
       >
-        <div style={{ fontSize: 72, fontWeight: 'bold', marginBottom: 16 }}>MoolaBiz</div>
-        <div style={{ fontSize: 32, opacity: 0.9 }}>Your WhatsApp Store — Made in South Africa</div>
-        <div style={{ fontSize: 24, opacity: 0.7, marginTop: 24 }}>From R89/month • No tech skills needed</div>
+        {/* Moola Bubble mark */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 96,
+            height: 96,
+            borderRadius: 28,
+            backgroundColor: '#0e7c5a',
+            color: '#f0a92b',
+            fontSize: 56,
+            fontWeight: 800,
+            marginBottom: 28,
+          }}
+        >
+          R
+        </div>
+        <div style={{ fontSize: 76, fontWeight: 800, letterSpacing: -2 }}>
+          Moola<span style={{ color: '#f0a92b' }}>Biz</span>
+        </div>
+        <div style={{ fontSize: 32, opacity: 0.85, marginTop: 12 }}>
+          Your WhatsApp store. Always open.
+        </div>
+        <div style={{ fontSize: 22, color: '#9cb3ac', marginTop: 22 }}>
+          From R89/month · Built in South Africa
+        </div>
       </div>
     ),
     { ...size }
