@@ -9,10 +9,10 @@
  * Request body (JSON):
  *   {
  *     orderCode?:   string   // Vendure order code, used as the Yoco reference
- *     amountCents?: number   // override the order total (integer >= 200); usually
- *                            // omitted — the route validates the amount you pass
- *                            // but does NOT fetch the live order total itself
- *                            // (the shop agent already knows it from list-orders).
+ *     amountCents?: number   // ONLY used when orderCode is omitted (ad-hoc/admin
+ *                            // links). When orderCode is given, the amount is
+ *                            // derived server-side from the order total and any
+ *                            // caller-supplied amount is ignored. [red-team F1 fix]
  *     currency?:    string   // default "ZAR" (Yoco only supports ZAR today)
  *   }
  *
@@ -38,6 +38,7 @@ import { merchants } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { decryptSecret, isEncrypted } from "@/lib/crypto";
 import { createYocoPaymentLink } from "@/lib/yoco";
+import { vendureAdminQuery } from "@/lib/vendure";
 import {
   authenticateBridgeRequest,
   isErrorResponse,
@@ -50,6 +51,14 @@ import {
 const MIN_AMOUNT_CENTS = 200; // R2.00 — Yoco minimum
 const MAX_AMOUNT_CENTS = 100_000_00; // R100,000 — sanity cap (100k ZAR in cents)
 const DEFAULT_CURRENCY = "ZAR";
+
+const ORDER_BY_CODE_QUERY = `
+  query OrderByCode($code: String!) {
+    orders(options: { filter: { code: { eq: $code } }, take: 1 }) {
+      items { code totalWithTax currencyCode state }
+    }
+  }
+`;
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -80,51 +89,68 @@ export async function POST(request: NextRequest) {
 
   const raw = body as Record<string, unknown>;
 
-  // orderCode: optional; used as Yoco reference if provided
+  // orderCode: optional but PREFERRED. When present, the amount is derived FROM
+  // the order inside this merchant's channel — we never trust a caller-supplied
+  // amount for an order (the shop agent is LLM-driven and could be talked into
+  // the wrong number). [red-team F1 fix]
   const orderCode =
     typeof raw.orderCode === "string" && raw.orderCode.trim()
       ? raw.orderCode.trim()
       : undefined;
 
-  // amountCents: required
-  if (raw.amountCents === undefined || raw.amountCents === null) {
-    return NextResponse.json(
-      { error: "amountCents is required" },
-      { status: 422 }
-    );
-  }
+  let amountCents: number;
+  let currency: string;
 
-  const amountCents = Number(raw.amountCents);
+  if (orderCode) {
+    try {
+      const data = await vendureAdminQuery<{
+        orders: { items: Array<{ code: string; totalWithTax: number; currencyCode: string }> };
+      }>(auth.vendureChannelToken, ORDER_BY_CODE_QUERY, { code: orderCode });
+      const order = data.orders.items?.[0];
+      if (!order) {
+        return NextResponse.json({ error: `Order ${orderCode} not found` }, { status: 404 });
+      }
+      amountCents = order.totalWithTax;
+      currency = (order.currencyCode || DEFAULT_CURRENCY).toUpperCase();
+    } catch (err) {
+      console.error(
+        "[payment-link] order lookup failed for merchant:",
+        auth.id,
+        (err as Error).message
+      );
+      return NextResponse.json({ error: "Could not load the order" }, { status: 502 });
+    }
+  } else {
+    // Fallback (no orderCode): trust the caller-supplied amount. Intended for
+    // ad-hoc / admin links, NOT the customer order flow.
+    if (raw.amountCents === undefined || raw.amountCents === null) {
+      return NextResponse.json(
+        { error: "Provide orderCode (preferred) or amountCents" },
+        { status: 422 }
+      );
+    }
+    amountCents = Number(raw.amountCents);
+    currency =
+      typeof raw.currency === "string" && raw.currency.trim()
+        ? raw.currency.trim().toUpperCase()
+        : DEFAULT_CURRENCY;
+  }
 
   if (!Number.isInteger(amountCents)) {
-    return NextResponse.json(
-      { error: "amountCents must be an integer" },
-      { status: 422 }
-    );
+    return NextResponse.json({ error: "amount must be an integer (cents)" }, { status: 422 });
   }
-
   if (amountCents < MIN_AMOUNT_CENTS) {
     return NextResponse.json(
-      {
-        error: `amountCents must be >= ${MIN_AMOUNT_CENTS} (R${(MIN_AMOUNT_CENTS / 100).toFixed(2)} — Yoco minimum)`,
-      },
+      { error: `amount must be >= ${MIN_AMOUNT_CENTS} cents (Yoco minimum)` },
       { status: 422 }
     );
   }
-
   if (amountCents > MAX_AMOUNT_CENTS) {
     return NextResponse.json(
-      {
-        error: `amountCents must be <= ${MAX_AMOUNT_CENTS} (R${(MAX_AMOUNT_CENTS / 100).toFixed(2)})`,
-      },
+      { error: `amount must be <= ${MAX_AMOUNT_CENTS} cents` },
       { status: 422 }
     );
   }
-
-  const currency =
-    typeof raw.currency === "string" && raw.currency.trim()
-      ? raw.currency.trim().toUpperCase()
-      : DEFAULT_CURRENCY;
 
   // --- 3. Load the full merchant row (scoped by auth.id) ---
   const [merchant] = await db
