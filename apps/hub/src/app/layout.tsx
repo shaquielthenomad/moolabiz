@@ -1,11 +1,24 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Geist } from "next/font/google";
+import { Bricolage_Grotesque, Inter_Tight } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Display: Bricolage Grotesque — characterful but legible, gives the brand a
+// crafted personality at headline sizes. Text: Inter Tight — ultra-legible on
+// cheap Android screens at small sizes and slightly condensed so long isiZulu/
+// isiXhosa words fit on mobile without awkward wrapping.
+const fontDisplay = Bricolage_Grotesque({
+  variable: "--font-display",
   subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  display: "swap",
+});
+
+const fontText = Inter_Tight({
+  variable: "--font-text",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -58,7 +71,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={`${geistSans.variable} antialiased`}>
+        <body className={`${fontDisplay.variable} ${fontText.variable} antialiased`}>
           {children}
         </body>
       </html>
