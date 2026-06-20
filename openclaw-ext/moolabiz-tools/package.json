@@ -1,0 +1,14 @@
+{
+  "name": "@moolabiz/openclaw-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MoolaBiz typed OpenClaw tools (catalog, orders, payment key) — replaces the SKILL.md + curl flow.",
+  "main": "index.ts",
+  "dependencies": {
+    "typebox": "*"
+  },
+  "peerDependencies": {
+    "openclaw": "*"
+  }
+}
