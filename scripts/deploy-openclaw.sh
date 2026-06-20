@@ -2,10 +2,14 @@
 set -euo pipefail
 
 # MoolaBiz OpenClaw Deployer
-# Usage: ./scripts/deploy-openclaw.sh <slug> <business-name> <owner-phone> <payment-provider> [ollama-url]
 #
-# This script is called by the hub's Coolify API integration, but can also be
-# run manually on the server for debugging.
+# DEPRECATED / LEGACY — do NOT use for new deployments.
+# Superseded by scripts/openclaw-provisioner.mjs (Azure OpenAI, Easy Mode theme,
+# exec-approvals) and the owner/customer + packing model under openclaw-ext/
+# (agent-model, packing, moolabiz-tools, moolabiz-shop-tools). This script still
+# wires a single ollama-backed agent and is kept only for reference/debugging.
+#
+# Usage (legacy): ./scripts/deploy-openclaw.sh <slug> <business-name> <owner-phone> <payment-provider> [ollama-url]
 
 SLUG="${1:?Usage: deploy-openclaw.sh <slug> <business-name> <owner-phone> <payment-provider> [ollama-url]}"
 BUSINESS_NAME="${2:?Missing business name}"
@@ -46,8 +50,7 @@ cat > "${CONFIG_DIR}/openclaw.json" << EOF
     "whatsapp": {
       "dmPolicy": "open",
       "allowFrom": ["*"],
-      "web": { "enabled": true },
-      "adminNumbers": ["${OWNER_PHONE}"]
+      "web": { "enabled": true }
     }
   },
   "ollama": {
