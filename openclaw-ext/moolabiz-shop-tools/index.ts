@@ -9,10 +9,15 @@
 // `moolabiz-tools`: the shop agent loads only this one, so a customer agent can
 // never reach catalog/payment-key write tools.
 //
-// Config resolution: plugins.entries["moolabiz-shop-tools"].config -> { catalogUrl, apiSecret }
-//                    or the CATALOG_URL / API_SECRET env vars (provisioner injects these).
+// Config resolution order (per merchant):
+//   1. {toolContext.workspaceDir}/moolabiz.json  -> { catalogUrl, apiSecret }
+//        Written per-agent by the multi-agent packing provisioner so that every
+//        merchant's shop agent resolves ITS OWN secret in a shared profile.
+//   2. plugin config  -> plugins.entries["moolabiz-shop-tools"].config = { catalogUrl, apiSecret }
+//   3. env vars       -> CATALOG_URL / API_SECRET  (the current provisioner already injects these)
 
 import { defineToolPlugin } from "openclaw/plugin-sdk/tool-plugin";
+import { readFileSync } from "node:fs";
 import { Type } from "typebox";
 
 type ToolConfig = { catalogUrl?: string; apiSecret?: string };
@@ -26,9 +31,33 @@ interface SimpleOrder {
   items: Array<{ name: string; quantity: number }>;
 }
 
-function resolveCfg(config: ToolConfig): { catalogUrl: string; apiSecret: string } {
-  const catalogUrl = (config.catalogUrl || process.env.CATALOG_URL || "").replace(/\/+$/, "");
-  const apiSecret = config.apiSecret || process.env.API_SECRET || "";
+/**
+ * Read per-agent credentials from {workspaceDir}/moolabiz.json if present.
+ * Missing file is fine (single-merchant / env-var deployments won't have it).
+ * Malformed JSON is surfaced so misconfigurations aren't silently swallowed.
+ */
+function readAgentCredFile(workspaceDir: string | undefined): Partial<ToolConfig> {
+  if (!workspaceDir) return {};
+  try {
+    const raw = readFileSync(`${workspaceDir}/moolabiz.json`, "utf8");
+    return JSON.parse(raw) as Partial<ToolConfig>;
+  } catch (err: unknown) {
+    // ENOENT: file simply isn't there (non-packed deployment) — that's fine.
+    if (err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT") return {};
+    // Any other error (malformed JSON, permissions) — re-throw so the operator sees it.
+    throw err;
+  }
+}
+
+function resolveCfg(
+  workspaceDir: string | undefined,
+  config: ToolConfig,
+): { catalogUrl: string; apiSecret: string } {
+  const fileCreds = readAgentCredFile(workspaceDir);
+  const catalogUrl = (
+    fileCreds.catalogUrl || config.catalogUrl || process.env.CATALOG_URL || ""
+  ).replace(/\/+$/, "");
+  const apiSecret = fileCreds.apiSecret || config.apiSecret || process.env.API_SECRET || "";
   return { catalogUrl, apiSecret };
 }
 
@@ -42,12 +71,13 @@ function senderToPhone(senderId: string | undefined): string {
 const rands = (cents: number): string => (cents / 100).toFixed(2);
 
 async function fetchOwnOrders(
+  workspaceDir: string | undefined,
   config: ToolConfig,
   phone: string,
 ): Promise<{ customer: { name: string | null } | null; orders: SimpleOrder[] }> {
-  const { catalogUrl, apiSecret } = resolveCfg(config);
+  const { catalogUrl, apiSecret } = resolveCfg(workspaceDir, config);
   if (!catalogUrl || !apiSecret) {
-    throw new Error("moolabiz-shop-tools: missing catalogUrl/apiSecret (config or CATALOG_URL/API_SECRET env)");
+    throw new Error("moolabiz-shop-tools: missing catalogUrl/apiSecret (workspaceDir/moolabiz.json, config, or CATALOG_URL/API_SECRET env)");
   }
   const res = await fetch(`${catalogUrl}/customer-orders?phone=${encodeURIComponent(phone)}`, {
     headers: { Authorization: `Bearer ${apiSecret}` },
@@ -81,10 +111,11 @@ export default defineToolPlugin({
       description:
         "Show the orders belonging to the customer in THIS chat. Takes no inputs — it always uses the customer's own verified WhatsApp number.",
       parameters: Type.Object({}),
-      // Factory form: gives access to the trusted requesterSenderId from the runtime.
+      // Factory form: gives access to the trusted requesterSenderId and workspaceDir from the runtime.
       factory: ({ config, toolContext }) => {
         const phone = senderToPhone(toolContext.requesterSenderId);
         const cfg = config as ToolConfig;
+        const workspaceDir = toolContext.workspaceDir;
         return {
           name: "my_orders",
           label: "My orders",
@@ -95,7 +126,7 @@ export default defineToolPlugin({
             if (!phone) {
               return text("I can't verify your number in this chat, so I can't look up your orders.");
             }
-            const data = await fetchOwnOrders(cfg, phone);
+            const data = await fetchOwnOrders(workspaceDir, cfg, phone);
             if (!data.orders?.length) {
               return text("I couldn't find any orders linked to your number yet.");
             }
@@ -117,6 +148,7 @@ export default defineToolPlugin({
       factory: ({ config, toolContext }) => {
         const phone = senderToPhone(toolContext.requesterSenderId);
         const cfg = config as ToolConfig;
+        const workspaceDir = toolContext.workspaceDir;
         return {
           name: "order_status",
           label: "Order status",
@@ -130,7 +162,7 @@ export default defineToolPlugin({
             if (!code) {
               return text("Which order? Send me the order code (e.g. MB-1234).");
             }
-            const data = await fetchOwnOrders(cfg, phone);
+            const data = await fetchOwnOrders(workspaceDir, cfg, phone);
             const match = (data.orders || []).find((o) => o.code.toLowerCase() === code.toLowerCase());
             if (!match) {
               return text(`I couldn't find order ${code} on your number. Double-check the code?`);
