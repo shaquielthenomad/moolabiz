@@ -54,6 +54,16 @@ function resolveCfg(
   config: ToolConfig,
 ): { catalogUrl: string; apiSecret: string } {
   const fileCreds = readAgentCredFile(workspaceDir);
+  // Packed multi-merchant process: never fall back to a shared config/env secret,
+  // which would read as a DIFFERENT merchant. [red-team H3]
+  if (
+    (process.env.MOOLABIZ_PACKED === "1" || process.env.MOOLABIZ_PACKED === "true") &&
+    (!fileCreds.apiSecret || !fileCreds.catalogUrl)
+  ) {
+    throw new Error(
+      "moolabiz-shop-tools: packed mode requires per-agent {workspaceDir}/moolabiz.json (cross-merchant safety).",
+    );
+  }
   const catalogUrl = (
     fileCreds.catalogUrl || config.catalogUrl || process.env.CATALOG_URL || ""
   ).replace(/\/+$/, "");
