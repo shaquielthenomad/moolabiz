@@ -1,6 +1,6 @@
 import type {Metadata, Viewport} from "next";
 import {Suspense} from "react";
-import {Geist, Geist_Mono} from "next/font/google";
+import {Bricolage_Grotesque, Inter_Tight, Geist_Mono} from "next/font/google";
 import "./globals.css";
 import {Toaster} from "@/components/ui/sonner";
 import {Navbar} from "@/components/layout/navbar";
@@ -10,9 +10,20 @@ import {SITE_NAME, SITE_URL} from "@/lib/metadata";
 import {getStoreName} from "@/lib/vendure/api";
 
 
-const geistSans = Geist({
+// Body text: Inter Tight — kept on the --font-geist-sans var the theme reads,
+// so the swap is a drop-in. Display: Bricolage Grotesque for headings.
+const fontText = Inter_Tight({
     variable: "--font-geist-sans",
     subsets: ["latin"],
+    weight: ["400", "500", "600"],
+    display: "swap",
+});
+
+const fontDisplay = Bricolage_Grotesque({
+    variable: "--font-display",
+    subsets: ["latin"],
+    weight: ["600", "700", "800"],
+    display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -63,7 +74,7 @@ export const viewport: Viewport = {
     initialScale: 1,
     maximumScale: 5,
     themeColor: [
-        {media: "(prefers-color-scheme: light)", color: "#ffffff"},
+        {media: "(prefers-color-scheme: light)", color: "#faf7f2"},
         {media: "(prefers-color-scheme: dark)", color: "#000000"},
     ],
 };
@@ -72,7 +83,7 @@ export default function RootLayout({children}: LayoutProps<'/'>) {
     return (
         <html lang="en" suppressHydrationWarning>
             <body
-                className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
+                className={`${fontText.variable} ${fontDisplay.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
             >
                 <Suspense>
                     <ThemeProvider>
