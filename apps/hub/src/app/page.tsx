@@ -68,17 +68,41 @@ const TESTIMONIALS = [
     quote:
       "I resell custom sneakers and my customers are always asking for different sizes. The bot manages stock and takes orders while I'm out sourcing pairs.",
     name: "Thabo K.",
-    business: "Custom sneaker reseller",
-    location: "Johannesburg",
+    business: "Sneaker reseller",
+    location: "Soweto, Johannesburg",
     photo: "/sellers/sneaker.jpg",
   },
   {
     quote:
-      "My clothing boutique now gets orders at 2am. I wake up, the orders are there, payment confirmed. It's like having a staff member that never sleeps.",
+      "My boutique now gets orders at 2am. I wake up, the orders are there, payment confirmed. It's like having a staff member that never sleeps.",
     name: "Fatima A.",
-    business: "Clothing boutique owner",
-    location: "Cape Town",
+    business: "Fashion boutique",
+    location: "Bo-Kaap, Cape Town",
     photo: "/sellers/boutique.jpg",
+  },
+  {
+    quote:
+      "We sell preserves, rusks and biltong from the farm stall. Now city folk order a box before they even drive out — we sell out most Saturdays.",
+    name: "Pieter v.d. Merwe",
+    business: "Farm stall",
+    location: "Stellenbosch",
+    photo: "/sellers/farmstall.jpg",
+  },
+  {
+    quote:
+      "Customers message me for spice mixes and décor at all hours. The shop takes the order and the payment while I'm with my family. More sales, less admin.",
+    name: "Priya Naidoo",
+    business: "Spices & home décor",
+    location: "Durban",
+    photo: "/sellers/spice.jpg",
+  },
+  {
+    quote:
+      "I sell grooming kits between cuts. The bot answers questions and takes orders while I'm busy with a client — like a front desk that never stops.",
+    name: "Devon A.",
+    business: "Barber & grooming",
+    location: "Cape Flats, Cape Town",
+    photo: "/sellers/barber.jpg",
   },
 ];
 
@@ -242,8 +266,10 @@ export default function Home() {
             <div className="mt-6 flex items-center gap-3 text-sm text-ink-muted">
               <span className="flex -space-x-2" aria-hidden="true">
                 <img src="/sellers/baker.jpg" alt="" className="w-7 h-7 rounded-full border-2 border-canvas object-cover" />
-                <img src="/sellers/sneaker.jpg" alt="" className="w-7 h-7 rounded-full border-2 border-canvas object-cover" />
                 <img src="/sellers/boutique.jpg" alt="" className="w-7 h-7 rounded-full border-2 border-canvas object-cover" />
+                <img src="/sellers/farmstall.jpg" alt="" className="w-7 h-7 rounded-full border-2 border-canvas object-cover" />
+                <img src="/sellers/spice.jpg" alt="" className="w-7 h-7 rounded-full border-2 border-canvas object-cover" />
+                <img src="/sellers/barber.jpg" alt="" className="w-7 h-7 rounded-full border-2 border-canvas object-cover" />
               </span>
               Join South African sellers already on MoolaBiz
             </div>
@@ -472,14 +498,14 @@ export default function Home() {
         <div className="max-w-screen-lg mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-semibold tracking-widest uppercase text-moola-deep mb-3">
-              What merchants love about MoolaBiz
+              From every corner of Mzansi
             </p>
             <h2 className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
-              Built for sellers like you
+              Sellers as diverse as South Africa
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {TESTIMONIALS.map((t) => (
               <div
                 key={t.name}
