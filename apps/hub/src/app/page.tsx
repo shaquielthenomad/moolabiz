@@ -62,8 +62,7 @@ const TESTIMONIALS = [
     name: "Lindiwe M.",
     business: "Home baker",
     location: "Pretoria",
-    initial: "L",
-    color: "bg-amber-500",
+    photo: "/sellers/baker.jpg",
   },
   {
     quote:
@@ -71,8 +70,7 @@ const TESTIMONIALS = [
     name: "Thabo K.",
     business: "Custom sneaker reseller",
     location: "Johannesburg",
-    initial: "T",
-    color: "bg-slate-700",
+    photo: "/sellers/sneaker.jpg",
   },
   {
     quote:
@@ -80,8 +78,7 @@ const TESTIMONIALS = [
     name: "Fatima A.",
     business: "Clothing boutique owner",
     location: "Cape Town",
-    initial: "F",
-    color: "bg-emerald-600",
+    photo: "/sellers/boutique.jpg",
   },
 ];
 
@@ -112,6 +109,19 @@ const FAQS = [
       "There are no contracts and no cancellation fees. You can cancel at any time from your dashboard. Your subscription simply won't renew at the end of the billing period.",
   },
 ];
+
+/* ────────────────────────────────────────────────────────────────────────────
+   MoolaBiz "Moola Bubble" mark — a WhatsApp chat bubble whose centre is a
+   gold Rand-coin "R" (conversation + money in one glyph).
+   ────────────────────────────────────────────────────────────────────────── */
+function Mark({ className = "w-8 h-8" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <path d="M7 3h22a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H15l-7 6v-6H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Z" fill="#0E7C5A" />
+      <path d="M13.7 20.2V9.8h4.9c2.2 0 3.7 1.3 3.7 3.3 0 1.5-.9 2.6-2.3 3.05l2.6 4.05h-2.5l-2.3-3.75h-1.7v3.75h-2.4Zm2.4-5.65h2.2c1 0 1.6-.5 1.6-1.35S19.3 11.5 18.3 11.5h-2.2v3.05Z" fill="#F0A92B" />
+    </svg>
+  );
+}
 
 export default function Home() {
   const [stage, setStage] = useState<Stage>("form");
@@ -161,78 +171,147 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="min-h-screen bg-canvas text-ink">
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200">
+      <nav
+        className="sticky top-0 z-50 backdrop-blur border-b border-hairline"
+        style={{ backgroundColor: "rgba(250,247,242,.82)" }}
+      >
         <div className="max-w-screen-xl mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="font-bold text-xl text-slate-900 tracking-tight">MoolaBiz</span>
-          <a
-            href="/login"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-          >
-            Log in
-          </a>
+          <span className="flex items-center gap-2.5">
+            <Mark className="w-8 h-8" />
+            <span className="font-display font-extrabold text-xl text-ink tracking-tight">MoolaBiz</span>
+          </span>
+          <div className="flex items-center gap-4">
+            <a
+              href="/login"
+              className="text-sm font-medium text-ink-muted hover:text-ink transition-colors"
+            >
+              Log in
+            </a>
+            <a
+              href="#signup"
+              className="bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+            >
+              Start selling
+            </a>
+          </div>
         </div>
       </nav>
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
-      <section className="bg-white px-6 pt-20 pb-24 text-center">
-        <div className="max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-8 tracking-wide border border-amber-200">
-            Howzit! Built for South African sellers
-          </div>
-
-          <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 leading-tight tracking-tight">
-            Your WhatsApp store.<br />
-            <span className="text-[#f59e0b]">Always open.</span>
-          </h1>
-
-          <p className="mt-6 text-lg sm:text-xl text-slate-500 max-w-xl mx-auto leading-relaxed">
-            Turn your WhatsApp into a 24/7 online store. Take orders, accept
-            payments, and grow your business — no tech skills needed.
-          </p>
-
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href="#signup"
-              className="w-full sm:w-auto bg-[#059669] hover:bg-[#047857] text-white font-semibold text-base px-8 py-3.5 rounded-xl shadow-sm transition-colors"
-            >
-              Start selling &rarr;
-            </a>
-            <a
-              href="#how-it-works"
-              className="w-full sm:w-auto border border-slate-300 hover:border-slate-400 text-slate-700 font-semibold text-base px-8 py-3.5 rounded-xl transition-colors"
-            >
-              See how it works
-            </a>
-          </div>
-
-          <p className="text-sm text-slate-500 mt-4 flex items-center justify-center gap-2">
-            <span className="flex -space-x-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-200 border-2 border-white inline-block"></span>
-              <span className="w-6 h-6 rounded-full bg-emerald-300 border-2 border-white inline-block"></span>
-              <span className="w-6 h-6 rounded-full bg-emerald-400 border-2 border-white inline-block"></span>
+      <section className="relative overflow-hidden bg-canvas">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(900px 500px at 80% -10%, rgba(14,124,90,.08), transparent 60%), radial-gradient(700px 480px at 0% 110%, rgba(240,169,43,.07), transparent 55%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="relative max-w-screen-xl mx-auto px-6 py-16 lg:py-20 grid lg:grid-cols-2 gap-12 lg:gap-14 items-center">
+          {/* Left — copy */}
+          <div>
+            <span className="inline-flex items-center gap-2 bg-moola-tint text-moola-deep text-xs font-semibold px-3.5 py-1.5 rounded-full border border-[#F2DDB0]">
+              👋 Howzit! Built for South African sellers
             </span>
-            Join South African sellers already on MoolaBiz
-          </p>
-          <p className="mt-3 text-sm text-slate-400">
-            Cancel anytime &middot; Live in under 10 minutes
-          </p>
-          <p className="mt-2 text-sm text-emerald-600 font-medium">
-            No setup fees &middot; Cancel anytime, no contracts
-          </p>
+            <h1 className="mt-6 font-display font-extrabold text-ink leading-[1.05] tracking-tight text-[2.5rem] sm:text-6xl">
+              Your WhatsApp store.<br />
+              <span className="text-primary">Always open.</span>
+            </h1>
+            <p className="mt-5 text-lg text-ink-muted max-w-md leading-relaxed">
+              Turn your WhatsApp into a 24/7 shop. Customers browse, order and
+              pay — right inside the chat they already use. No tech skills needed.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <a
+                href="#signup"
+                className="inline-flex justify-center items-center bg-primary hover:bg-primary-hover text-white font-semibold px-7 py-3.5 rounded-xl transition-colors"
+                style={{ boxShadow: "0 10px 30px rgba(14,124,90,.22)" }}
+              >
+                Start selling &rarr;
+              </a>
+              <a
+                href="#how-it-works"
+                className="inline-flex justify-center items-center bg-surface border border-hairline-strong hover:border-ink text-ink font-semibold px-7 py-3.5 rounded-xl transition-colors"
+              >
+                See how it works
+              </a>
+            </div>
+            <div className="mt-6 flex items-center gap-3 text-sm text-ink-muted">
+              <span className="flex -space-x-2" aria-hidden="true">
+                <img src="/sellers/baker.jpg" alt="" className="w-7 h-7 rounded-full border-2 border-canvas object-cover" />
+                <img src="/sellers/sneaker.jpg" alt="" className="w-7 h-7 rounded-full border-2 border-canvas object-cover" />
+                <img src="/sellers/boutique.jpg" alt="" className="w-7 h-7 rounded-full border-2 border-canvas object-cover" />
+              </span>
+              Join South African sellers already on MoolaBiz
+            </div>
+            <p className="mt-2.5 text-sm text-ink-muted">
+              No setup fees &middot;{" "}
+              <span className="text-primary font-medium">Live in under 10 minutes</span> &middot; Cancel anytime
+            </p>
+          </div>
+
+          {/* Right — WhatsApp chat → order device */}
+          <div className="relative flex justify-center lg:justify-end">
+            <img
+              src="/sellers/baker.jpg"
+              alt="A South African home baker preparing an order"
+              loading="lazy"
+              className="hidden sm:block absolute -left-2 bottom-6 w-36 h-36 rounded-2xl object-cover border-4 border-white shadow-xl -rotate-3 z-10"
+            />
+            <div className="relative z-20 w-[300px] rounded-[42px] p-2.5 shadow-2xl" style={{ background: "#0c1f1b" }}>
+              <div className="rounded-[32px] overflow-hidden h-[600px] flex flex-col" style={{ background: "#E5DDD3" }}>
+                {/* WhatsApp header */}
+                <div className="flex items-center gap-2.5 px-3.5 pt-4 pb-3 bg-primary text-white">
+                  <img src="/sellers/baker.jpg" alt="" className="w-9 h-9 rounded-full object-cover border border-white/40" />
+                  <div className="leading-tight">
+                    <div className="font-semibold text-sm">Lindiwe&apos;s Cakes</div>
+                    <div className="text-[11px] text-white/80">online · replies instantly</div>
+                  </div>
+                </div>
+                {/* Chat */}
+                <div
+                  className="flex-1 px-3 py-3.5 flex flex-col gap-2.5 overflow-hidden"
+                  style={{ backgroundImage: "radial-gradient(rgba(0,0,0,.025) 1px, transparent 1px)", backgroundSize: "14px 14px" }}
+                >
+                  <div className="self-start max-w-[84%] bg-white rounded-xl rounded-tl-sm px-3 py-2 text-[13px] text-ink shadow-sm">
+                    Sawubona 👋 Do you have chocolate cupcakes?
+                  </div>
+                  <div className="self-end max-w-[84%] rounded-xl rounded-tr-sm px-3 py-2 text-[13px] text-ink shadow-sm" style={{ background: "#DCF8C6" }}>
+                    Yebo! Our bestseller 👇 Fresh today.
+                  </div>
+                  <div className="self-end max-w-[86%] bg-white rounded-xl overflow-hidden shadow-sm">
+                    <img src="/sellers/baker.jpg" alt="" className="h-24 w-full object-cover" />
+                    <div className="px-2.5 py-2">
+                      <div className="text-[13px] font-semibold text-ink">Chocolate Cupcakes ×6</div>
+                      <div className="text-sm font-bold text-primary">R180</div>
+                      <div className="mt-1.5 bg-primary text-white text-center text-[12px] font-semibold py-1.5 rounded-lg">＋ Add to cart</div>
+                    </div>
+                  </div>
+                  <div className="self-start max-w-[84%] bg-white rounded-xl rounded-tl-sm px-3 py-2 text-[13px] text-ink shadow-sm">
+                    Yes please, 2 boxes 🙏
+                  </div>
+                  <div className="self-end max-w-[86%] rounded-xl rounded-tr-sm px-3 py-2.5 text-[12.5px] text-white" style={{ background: "#143A33" }}>
+                    Order <b className="text-moola">MB-1042</b> confirmed ✅<br />
+                    Total <b className="text-moola">R360</b> · Pay on delivery or tap to pay by card
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ── How It Works ────────────────────────────────────────────────── */}
-      <section id="how-it-works" className="bg-[#f8fafc] border-y border-slate-200 py-20 px-6">
+      <section id="how-it-works" className="bg-canvas-sunk border-y border-hairline py-20 px-6">
         <div className="max-w-screen-lg mx-auto">
           <div className="text-center mb-14">
-            <p className="text-xs font-semibold tracking-widest uppercase text-[#f59e0b] mb-3">
+            <p className="text-xs font-semibold tracking-widest uppercase text-moola-deep mb-3">
               Simple setup
             </p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
               Up and running in three steps
             </h2>
           </div>
@@ -240,7 +319,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative">
             {/* Connector line — desktop only */}
             <div
-              className="hidden sm:block absolute top-8 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-slate-200 z-0"
+              className="hidden sm:block absolute top-8 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-hairline z-0"
               aria-hidden="true"
             />
 
@@ -251,7 +330,7 @@ export default function Home() {
                 detail:
                   "Enter your business name, WhatsApp number, and the products you sell. No technical knowledge required.",
                 icon: (
-                  <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
+                  <svg className="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
                 ),
@@ -262,7 +341,7 @@ export default function Home() {
                 detail:
                   "We deploy your store bot to your existing WhatsApp number. Your customers keep messaging the same number they already know.",
                 icon: (
-                  <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
+                  <svg className="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
                   </svg>
                 ),
@@ -273,19 +352,19 @@ export default function Home() {
                 detail:
                   "Share your store link. Customers browse, add to cart, and pay — all inside WhatsApp, 24 hours a day.",
                 icon: (
-                  <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
+                  <svg className="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
                   </svg>
                 ),
               },
             ].map((item) => (
               <div key={item.step} className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mb-5">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-hairline shadow-sm flex items-center justify-center mb-5">
                   {item.icon}
                 </div>
-                <p className="text-xs font-bold text-[#f59e0b] tracking-widest mb-2">{item.step}</p>
-                <h3 className="font-semibold text-slate-900 text-base mb-2">{item.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed max-w-[220px]">{item.detail}</p>
+                <p className="text-xs font-bold text-moola-deep tracking-widest mb-2">{item.step}</p>
+                <h3 className="font-semibold text-ink text-base mb-2">{item.title}</h3>
+                <p className="text-sm text-ink-muted leading-relaxed max-w-[220px]">{item.detail}</p>
               </div>
             ))}
           </div>
@@ -296,13 +375,13 @@ export default function Home() {
       <section className="bg-white py-20 px-6">
         <div className="max-w-screen-lg mx-auto">
           <div className="text-center mb-14">
-            <p className="text-xs font-semibold tracking-widest uppercase text-[#f59e0b] mb-3">
+            <p className="text-xs font-semibold tracking-widest uppercase text-moola-deep mb-3">
               Everything you need
             </p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
               Built for South African sellers
             </h2>
-            <p className="mt-4 text-slate-500 max-w-xl mx-auto">
+            <p className="mt-4 text-ink-muted max-w-xl mx-auto">
               Whether you sell cakes, clothing, sneakers, beauty products, or anything else —
               MoolaBiz handles the selling so you can focus on your craft.
             </p>
@@ -373,13 +452,13 @@ export default function Home() {
             ].map((feature) => (
               <div
                 key={feature.title}
-                className="bg-[#f8fafc] rounded-2xl border border-slate-200 p-6 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                className="bg-canvas-sunk rounded-2xl border border-hairline p-6 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
               >
-                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 mb-4 shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-white border border-hairline flex items-center justify-center text-ink mb-4 shadow-sm">
                   {feature.icon}
                 </div>
-                <h3 className="font-semibold text-slate-900 text-base mb-2">{feature.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">
+                <h3 className="font-semibold text-ink text-base mb-2">{feature.title}</h3>
+                <p className="text-sm text-ink-muted leading-relaxed">
                   {feature.description}
                 </p>
               </div>
@@ -389,13 +468,13 @@ export default function Home() {
       </section>
 
       {/* ── Testimonials ────────────────────────────────────────────────── */}
-      <section className="bg-[#f8fafc] border-y border-slate-200 py-20 px-6">
+      <section className="bg-canvas-sunk border-y border-hairline py-20 px-6">
         <div className="max-w-screen-lg mx-auto">
           <div className="text-center mb-14">
-            <p className="text-xs font-semibold tracking-widest uppercase text-[#f59e0b] mb-3">
+            <p className="text-xs font-semibold tracking-widest uppercase text-moola-deep mb-3">
               What merchants love about MoolaBiz
             </p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
               Built for sellers like you
             </h2>
           </div>
@@ -404,34 +483,34 @@ export default function Home() {
             {TESTIMONIALS.map((t) => (
               <div
                 key={t.name}
-                className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-5 hover:shadow-md transition-shadow duration-200"
+                className="bg-white rounded-2xl border border-hairline p-6 flex flex-col gap-5 hover:shadow-md transition-shadow duration-200"
               >
                 {/* Stars */}
                 <div className="flex gap-0.5" aria-label="5 stars">
                   {[...Array(5)].map((_, i) => (
-                    <svg key={i} className="w-4 h-4 text-amber-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <svg key={i} className="w-4 h-4 text-moola" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
                   ))}
                 </div>
 
-                <p className="text-slate-600 text-sm leading-relaxed flex-1">
+                <p className="text-ink-muted text-sm leading-relaxed flex-1">
                   &ldquo;{t.quote}&rdquo;
                 </p>
 
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                  <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${t.color}`}
-                    aria-hidden="true"
-                  >
-                    {t.initial}
-                  </div>
+                <div className="flex items-center gap-3 pt-4 border-t border-hairline">
+                  <img
+                    src={t.photo}
+                    alt={t.name}
+                    loading="lazy"
+                    className="w-10 h-10 rounded-full object-cover shrink-0 border border-hairline"
+                  />
                   <div>
-                    <p className="font-semibold text-sm text-slate-900">
+                    <p className="font-semibold text-sm text-ink">
                       {t.name}
-                      <span className="ml-1.5 text-[10px] font-normal text-slate-400">(Example)</span>
+                      <span className="ml-1.5 text-[10px] font-normal text-ink-muted">(Example)</span>
                     </p>
-                    <p className="text-xs text-slate-400">{t.business} &middot; {t.location}</p>
+                    <p className="text-xs text-ink-muted">{t.business} &middot; {t.location}</p>
                   </div>
                 </div>
               </div>
@@ -444,13 +523,13 @@ export default function Home() {
       <section id="signup" className="bg-white py-20 px-6 scroll-mt-16">
         <div className="max-w-screen-xl mx-auto">
           <div className="text-center mb-4">
-            <p className="text-xs font-semibold tracking-widest uppercase text-[#f59e0b] mb-3">
+            <p className="text-xs font-semibold tracking-widest uppercase text-moola-deep mb-3">
               Pricing
             </p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
               Simple, transparent pricing
             </h2>
-            <p className="mt-3 text-slate-500">
+            <p className="mt-3 text-ink-muted">
               Pay monthly, cancel anytime. No contracts.
             </p>
 
@@ -462,8 +541,8 @@ export default function Home() {
                   onClick={() => setCurrency(opt.value)}
                   className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     currency === opt.value
-                      ? "bg-slate-900 text-white border-slate-900"
-                      : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
+                      ? "bg-secondary text-white border-secondary"
+                      : "bg-white text-ink-muted border-hairline-strong hover:border-ink-muted"
                   }`}
                   aria-pressed={currency === opt.value}
                 >
@@ -518,13 +597,13 @@ export default function Home() {
       </section>
 
       {/* ── FAQ ─────────────────────────────────────────────────────────── */}
-      <section className="bg-[#f8fafc] border-y border-slate-200 py-20 px-6">
+      <section className="bg-canvas-sunk border-y border-hairline py-20 px-6">
         <div className="max-w-screen-md mx-auto">
           <div className="text-center mb-12">
-            <p className="text-xs font-semibold tracking-widest uppercase text-[#f59e0b] mb-3">
+            <p className="text-xs font-semibold tracking-widest uppercase text-moola-deep mb-3">
               FAQ
             </p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
               Common questions
             </h2>
           </div>
@@ -537,38 +616,49 @@ export default function Home() {
       </section>
 
       {/* ── Final CTA ───────────────────────────────────────────────────── */}
-      <section className="bg-white py-24 px-6 text-center">
-        <div className="max-w-xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-            Ready to start selling?
+      <section className="relative overflow-hidden py-24 px-6 text-center" style={{ backgroundColor: "#0F2A24" }}>
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: "radial-gradient(600px 300px at 80% 0%, rgba(240,169,43,.10), transparent 60%)" }}
+          aria-hidden="true"
+        />
+        <div className="relative max-w-xl mx-auto">
+          <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Ready to make some <span className="text-moola">moola</span>?
           </h2>
-          <p className="mt-4 text-slate-500 text-lg">
-            Join South African sellers who run their business through WhatsApp.
+          <p className="mt-4 text-lg" style={{ color: "#9CB3AC" }}>
+            Join the South African sellers running their whole business through WhatsApp.
           </p>
           <div className="mt-8">
             <a
               href="#signup"
-              className="inline-block bg-[#059669] hover:bg-[#047857] text-white font-semibold text-base px-10 py-4 rounded-xl shadow-sm transition-colors"
+              className="inline-block bg-surface hover:bg-canvas-sunk text-ink font-semibold text-base px-10 py-4 rounded-xl shadow-lg transition-colors"
             >
               Start selling &rarr;
             </a>
           </div>
-          <p className="mt-4 text-sm text-slate-400">
+          <p className="mt-4 text-sm" style={{ color: "#9CB3AC" }}>
             Pay monthly &middot; Cancel anytime
           </p>
         </div>
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-200 py-10 px-6">
-        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
-          <span className="font-semibold text-slate-500 tracking-tight">MoolaBiz</span>
-          <div className="flex items-center gap-6">
-            <a href="/privacy" className="hover:text-slate-600 transition-colors">Privacy</a>
-            <a href="/terms" className="hover:text-slate-600 transition-colors">Terms</a>
-            <a href="mailto:support@moolabiz.shop" className="hover:text-slate-600 transition-colors">Contact</a>
+      <footer className="bg-canvas-sunk border-t border-hairline py-10 px-6">
+        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-sm text-ink-muted">
+          <span className="flex items-center gap-2.5">
+            <Mark className="w-7 h-7" />
+            <span className="font-display font-bold text-ink tracking-tight">MoolaBiz</span>
+          </span>
+          <div className="text-[13px]">
+            <span className="font-semibold text-ink">Howzit</span> · Sawubona · Molo · Dumela · Goeie dag
           </div>
-          <p>&copy; 2026 MoolaBiz &mdash; Made in South Africa</p>
+          <div className="flex items-center gap-6">
+            <a href="/privacy" className="hover:text-ink transition-colors">Privacy</a>
+            <a href="/terms" className="hover:text-ink transition-colors">Terms</a>
+            <a href="mailto:support@moolabiz.shop" className="hover:text-ink transition-colors">Contact</a>
+          </div>
+          <p>&copy; 2026 MoolaBiz &middot; Built in South Africa 🇿🇦</p>
         </div>
       </footer>
     </main>
@@ -583,15 +673,15 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-hairline overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full text-left px-6 py-5 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors"
         aria-expanded={open}
       >
-        <span className="font-medium text-slate-900 text-sm sm:text-base">{question}</span>
+        <span className="font-medium text-ink text-sm sm:text-base">{question}</span>
         <svg
-          className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`w-5 h-5 text-ink-muted shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={2}
@@ -603,7 +693,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
       </button>
       {open && (
         <div className="px-6 pb-5">
-          <p className="text-slate-500 text-sm leading-relaxed">{answer}</p>
+          <p className="text-ink-muted text-sm leading-relaxed">{answer}</p>
         </div>
       )}
     </div>
@@ -626,15 +716,15 @@ function SignupForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-8 space-y-5"
+      className="max-w-md mx-auto bg-white rounded-2xl border border-hairline shadow-sm p-8 space-y-5"
     >
       <div>
-        <h3 className="text-xl font-bold text-slate-900">Create your store</h3>
-        <p className="text-sm text-slate-500 mt-1">Takes about 2 minutes</p>
+        <h3 className="text-xl font-bold text-ink">Create your store</h3>
+        <p className="text-sm text-ink-muted mt-1">Takes about 2 minutes</p>
       </div>
 
       <div>
-        <label htmlFor="businessName" className="block text-sm font-medium text-slate-700 mb-1.5">
+        <label htmlFor="businessName" className="block text-sm font-medium text-ink mb-1.5">
           Business name
         </label>
         <input
@@ -646,12 +736,12 @@ function SignupForm({
           placeholder="e.g. Lindiwe's Cakes"
           value={formData.businessName}
           onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-base transition-colors"
+          className="block w-full rounded-xl border border-hairline-strong px-4 py-3 text-ink placeholder:text-ink-muted focus:border-primary focus:ring-2 focus:ring-primary-tint outline-none text-base transition-colors"
         />
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
+        <label htmlFor="email" className="block text-sm font-medium text-ink mb-1.5">
           Email address
         </label>
         <input
@@ -661,13 +751,13 @@ function SignupForm({
           placeholder="you@example.com"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-base transition-colors"
+          className="block w-full rounded-xl border border-hairline-strong px-4 py-3 text-ink placeholder:text-ink-muted focus:border-primary focus:ring-2 focus:ring-primary-tint outline-none text-base transition-colors"
         />
-        <p className="text-xs text-slate-400 mt-1.5">We&apos;ll send your store details here.</p>
+        <p className="text-xs text-ink-muted mt-1.5">We&apos;ll send your store details here.</p>
       </div>
 
       <div>
-        <label htmlFor="whatsappNumber" className="block text-sm font-medium text-slate-700 mb-1.5">
+        <label htmlFor="whatsappNumber" className="block text-sm font-medium text-ink mb-1.5">
           WhatsApp number
         </label>
         <input
@@ -683,13 +773,13 @@ function SignupForm({
             if (!val.startsWith("+")) val = "+" + val;
             setFormData({ ...formData, whatsappNumber: val });
           }}
-          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-base transition-colors"
+          className="block w-full rounded-xl border border-hairline-strong px-4 py-3 text-ink placeholder:text-ink-muted focus:border-primary focus:ring-2 focus:ring-primary-tint outline-none text-base transition-colors"
         />
-        <p className="text-xs text-slate-400 mt-1.5">Your number stays private. We never share it.</p>
+        <p className="text-xs text-ink-muted mt-1.5">Your number stays private. We never share it.</p>
       </div>
 
       <div>
-        <label htmlFor="paymentProvider" className="block text-sm font-medium text-slate-700 mb-1.5">
+        <label htmlFor="paymentProvider" className="block text-sm font-medium text-ink mb-1.5">
           Payment provider
         </label>
         <select
@@ -702,7 +792,7 @@ function SignupForm({
               paymentProvider: e.target.value as SignupFormData["paymentProvider"],
             })
           }
-          className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-base transition-colors"
+          className="block w-full rounded-xl border border-hairline-strong px-4 py-3 text-ink bg-white focus:border-primary focus:ring-2 focus:ring-primary-tint outline-none text-base transition-colors"
         >
           <option value="yoco">Yoco</option>
           <option value="ozow" disabled>Ozow (coming soon)</option>
@@ -712,12 +802,12 @@ function SignupForm({
 
       <button
         type="submit"
-        className="w-full bg-[#059669] hover:bg-[#047857] text-white font-semibold text-base py-3.5 rounded-xl shadow-sm transition-colors"
+        className="w-full bg-primary hover:bg-primary-hover text-white font-semibold text-base py-3.5 rounded-xl shadow-sm transition-colors"
       >
         Choose a plan &rarr;
       </button>
 
-      <p className="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1.5">
+      <p className="text-center text-xs text-ink-muted mt-3 flex items-center justify-center gap-1.5">
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         Secured by Stripe &bull; Cancel anytime &bull; No contracts
       </p>
@@ -745,8 +835,8 @@ function PlanPicker({
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h3 className="text-xl font-bold text-slate-900">Choose your plan</h3>
-        <p className="text-slate-500 mt-1 text-sm">
+        <h3 className="text-xl font-bold text-ink">Choose your plan</h3>
+        <p className="text-ink-muted mt-1 text-sm">
           All plans include your WhatsApp store. Cancel anytime.
         </p>
       </div>
@@ -766,32 +856,32 @@ function PlanPicker({
             key={plan.id}
             className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-200 hover:shadow-lg ${
               plan.popular
-                ? "border-[#059669] border-2 shadow-md"
-                : "border-slate-200 shadow-sm"
+                ? "border-primary border-2 shadow-md"
+                : "border-hairline shadow-sm"
             } bg-white`}
           >
             {plan.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#059669] text-white text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap">
                 Most popular
               </div>
             )}
 
-            <h3 className="font-bold text-slate-900 text-base mt-2">{plan.name}</h3>
+            <h3 className="font-bold text-ink text-base mt-2">{plan.name}</h3>
 
             <div className="mt-3 flex items-end gap-1">
-              <span className="text-3xl font-bold text-slate-900 leading-none">
+              <span className="text-3xl font-bold text-ink leading-none">
                 {plan.priceDisplays[currency]}
               </span>
-              <span className="text-slate-400 text-sm pb-0.5">/month</span>
+              <span className="text-ink-muted text-sm pb-0.5">/month</span>
             </div>
 
-            <div className="my-4 border-t border-slate-100" />
+            <div className="my-4 border-t border-hairline" />
 
             <ul className="space-y-2.5 flex-1">
               {plan.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm text-slate-600">
+                <li key={f} className="flex items-start gap-2 text-sm text-ink-muted">
                   <svg
-                    className="w-4 h-4 text-[#059669] mt-0.5 shrink-0"
+                    className="w-4 h-4 text-primary mt-0.5 shrink-0"
                     fill="none"
                     viewBox="0 0 24 24"
                     strokeWidth={2.5}
@@ -803,7 +893,7 @@ function PlanPicker({
                   <span>
                     {f}
                     {COMING_SOON_FEATURES.has(f) && (
-                      <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Coming soon</span>
+                      <span className="ml-1 text-[10px] bg-moola-tint text-moola-deep px-1.5 py-0.5 rounded-full font-medium">Coming soon</span>
                     )}
                   </span>
                 </li>
@@ -815,8 +905,8 @@ function PlanPicker({
               disabled={loading}
               className={`mt-6 w-full py-3 rounded-xl font-semibold text-sm transition-colors ${
                 plan.popular
-                  ? "bg-[#059669] hover:bg-[#047857] text-white shadow-sm"
-                  : "border border-slate-300 hover:border-slate-400 text-slate-700"
+                  ? "bg-primary hover:bg-primary-hover text-white shadow-sm"
+                  : "border border-hairline-strong hover:border-ink-muted text-ink"
               } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {loading ? (
@@ -832,7 +922,7 @@ function PlanPicker({
       <div className="text-center">
         <button
           onClick={onBack}
-          className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+          className="text-sm text-ink-muted hover:text-ink-muted transition-colors"
         >
           &larr; Back
         </button>
@@ -876,15 +966,15 @@ function PaymentWaitlist({
 
   return (
     <div className="max-w-sm mx-auto">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 space-y-5">
+      <div className="bg-white rounded-2xl border border-hairline shadow-sm p-8 space-y-5">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto">
-            <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
+          <div className="w-12 h-12 rounded-xl bg-moola-tint border border-moola-tint flex items-center justify-center mx-auto">
+            <svg className="w-6 h-6 text-moola" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
             </svg>
           </div>
-          <h3 className="text-lg font-bold text-slate-900">Payments coming soon</h3>
-          <p className="text-sm text-slate-500 leading-relaxed">
+          <h3 className="text-lg font-bold text-ink">Payments coming soon</h3>
+          <p className="text-sm text-ink-muted leading-relaxed">
             We&apos;re finalising our payment setup. Leave your number and we&apos;ll
             message you the moment it&apos;s ready — usually within a day.
           </p>
@@ -896,7 +986,7 @@ function PaymentWaitlist({
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-emerald-800 font-semibold text-sm">You&apos;re on the list</p>
-            <p className="text-emerald-600 text-xs">
+            <p className="text-primary text-xs">
               We&apos;ll message you at{" "}
               <span className="font-medium">{waitlistNumber}</span>.
             </p>
@@ -904,7 +994,7 @@ function PaymentWaitlist({
         ) : (
           <form onSubmit={handleWaitlistSubmit} className="space-y-4">
             <div>
-              <label htmlFor="waitlistNumber" className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label htmlFor="waitlistNumber" className="block text-sm font-medium text-ink mb-1.5">
                 Your WhatsApp number
               </label>
               <input
@@ -920,13 +1010,13 @@ function PaymentWaitlist({
                   if (!val.startsWith("+27")) val = "+27";
                   setWaitlistNumber(val);
                 }}
-                className="block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base transition-colors"
+                className="block w-full rounded-xl border border-hairline-strong px-4 py-3 text-ink placeholder:text-ink-muted focus:border-moola focus:ring-2 focus:ring-moola-tint outline-none text-base transition-colors"
               />
             </div>
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-[#059669] hover:bg-[#047857] text-white font-semibold text-base py-3.5 rounded-xl shadow-sm transition-colors disabled:opacity-50"
+              className="w-full bg-primary hover:bg-primary-hover text-white font-semibold text-base py-3.5 rounded-xl shadow-sm transition-colors disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Notify me"}
             </button>
@@ -936,7 +1026,7 @@ function PaymentWaitlist({
         <div className="text-center">
           <button
             onClick={onBack}
-            className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+            className="text-sm text-ink-muted hover:text-ink-muted transition-colors"
           >
             &larr; Back to plans
           </button>
